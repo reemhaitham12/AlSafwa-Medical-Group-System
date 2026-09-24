@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: #ffffff;
+    color: #0f172a;
+    font-family: 'Inter', 'Cairo', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar for clean UI */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+/* RTL Helpers */
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="ltr"] {
+  text-align: left;
+}
+
+/* Print CSS Rules: Print ONLY printable invoice (#printable-invoice) or stock order (#printable-stock-order) */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@media print {
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide header, navigation, sidebars, buttons, and modals outside printable containers */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Make only printable containers and their children visible */
+  #printable-invoice,
+  #printable-invoice *,
+  #printable-stock-order,
+  #printable-stock-order * {
+    visibility: visible !important;
+  }
+
+  /* Position printable containers cleanly on paper */
+  #printable-invoice,
+  #printable-stock-order {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* Force solid black text for printable content */
+  #printable-invoice *,
+  #printable-stock-order * {
+    color: #000000 !important;
+  }
+
+  /* Table print styling: solid black borders around table and every cell */
+  #printable-invoice table,
+  #printable-stock-order table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 2px solid #000000 !important;
+    margin-top: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  table,
+  th,
+  td {
+    border: 1px solid #000000 !important;
+  }
+
+  #printable-invoice th,
+  #printable-invoice td,
+  #printable-stock-order th,
+  #printable-stock-order td {
+    border: 1px solid #000000 !important;
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+    color: #000000 !important;
+  }
+
+  #printable-invoice th,
+  #printable-stock-order th {
+    background-color: #f1f5f9 !important;
+    font-weight: bold !important;
+    border-bottom: 2px solid #000000 !important;
+  }
+
+  /* Customer info & totals box borders */
+  #printable-invoice .bg-surface-50,
+  #printable-invoice .bg-emerald-50,
+  #printable-invoice .bg-brand-50,
+  #printable-stock-order .bg-surface-50 {
+    border: 1px solid #000000 !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+}
