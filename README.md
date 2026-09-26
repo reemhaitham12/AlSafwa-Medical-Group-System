@@ -54,11 +54,7 @@ Copy `.env.example` to `.env`:
 cp .env.example .env
 ```
 
-Open `.env` and fill in your actual credentials from **Supabase Dashboard -> Project Settings -> API**:
-```env
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key-here
-```
+
 
 ### 4. Run Development Server
 ```bash
