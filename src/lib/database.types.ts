@@ -64,6 +64,26 @@ export interface InvoiceItem {
   created_at: string;
 }
 
+export interface InventoryStock {
+  id: string;
+  product_id: string | null;
+  product_name_snapshot: string;
+  quantity: number;
+  expiry_date: string; // DATE stored as YYYY-MM-DD string (NOT NULL)
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InventoryIncoming {
+  id: string;
+  product_id: string | null;
+  product_name_snapshot: string;
+  quantity: number;
+  expiry_date: string; // DATE stored as YYYY-MM-DD string (NOT NULL)
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -91,6 +111,16 @@ export interface Database {
         Row: InvoiceItem;
         Insert: Omit<InvoiceItem, 'id' | 'created_at'> & { id?: string; created_at?: string };
         Update: Partial<Omit<InvoiceItem, 'id'>>;
+      };
+      inventory_stock: {
+        Row: InventoryStock;
+        Insert: Omit<InventoryStock, 'id' | 'created_at' | 'updated_at'> & { id?: string; created_at?: string; updated_at?: string };
+        Update: Partial<Omit<InventoryStock, 'id'>>;
+      };
+      inventory_incoming: {
+        Row: InventoryIncoming;
+        Insert: Omit<InventoryIncoming, 'id' | 'created_at' | 'updated_at'> & { id?: string; created_at?: string; updated_at?: string };
+        Update: Partial<Omit<InventoryIncoming, 'id'>>;
       };
     };
   };

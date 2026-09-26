@@ -7,6 +7,7 @@ import {
   Users,
   Package,
   Truck,
+  Boxes,
   Settings,
   Activity,
   LogOut
@@ -30,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     { path: '/customers', label: isArabic ? 'العملاء' : 'Customers', icon: Users },
     { path: '/products', label: isArabic ? 'المنتجات' : 'Products', icon: Package },
     { path: '/stock-order', label: isArabic ? 'طلبيات المخزن' : 'Stock Order', icon: Truck },
+    { path: '/inventory', label: isArabic ? 'المنتجات والمخزون' : 'Products & Inventory', icon: Boxes },
     { path: '/settings', label: isArabic ? 'الإعدادات' : 'Settings', icon: Settings },
   ];
 

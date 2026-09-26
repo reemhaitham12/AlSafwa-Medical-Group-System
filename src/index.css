@@ -66,13 +66,16 @@
   #printable-invoice,
   #printable-invoice *,
   #printable-stock-order,
-  #printable-stock-order * {
+  #printable-stock-order *,
+  #printable-inventory,
+  #printable-inventory * {
     visibility: visible !important;
   }
 
   /* Position printable containers cleanly on paper */
   #printable-invoice,
-  #printable-stock-order {
+  #printable-stock-order,
+  #printable-inventory {
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
@@ -89,13 +92,15 @@
 
   /* Force solid black text for printable content */
   #printable-invoice *,
-  #printable-stock-order * {
+  #printable-stock-order *,
+  #printable-inventory * {
     color: #000000 !important;
   }
 
   /* Table print styling: solid black borders around table and every cell */
   #printable-invoice table,
-  #printable-stock-order table {
+  #printable-stock-order table,
+  #printable-inventory table {
     width: 100% !important;
     border-collapse: collapse !important;
     border: 2px solid #000000 !important;
@@ -112,7 +117,9 @@
   #printable-invoice th,
   #printable-invoice td,
   #printable-stock-order th,
-  #printable-stock-order td {
+  #printable-stock-order td,
+  #printable-inventory th,
+  #printable-inventory td {
     border: 1px solid #000000 !important;
     padding: 8px 12px !important;
     font-size: 14px !important;
@@ -120,7 +127,8 @@
   }
 
   #printable-invoice th,
-  #printable-stock-order th {
+  #printable-stock-order th,
+  #printable-inventory th {
     background-color: #f1f5f9 !important;
     font-weight: bold !important;
     border-bottom: 2px solid #000000 !important;
@@ -130,7 +138,8 @@
   #printable-invoice .bg-surface-50,
   #printable-invoice .bg-emerald-50,
   #printable-invoice .bg-brand-50,
-  #printable-stock-order .bg-surface-50 {
+  #printable-stock-order .bg-surface-50,
+  #printable-inventory .bg-surface-50 {
     border: 1px solid #000000 !important;
     background-color: #ffffff !important;
     color: #000000 !important;

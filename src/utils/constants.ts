@@ -15,5 +15,6 @@ export const NAVIGATION_ITEMS = [
   { path: '/customers', labelEn: 'Customers', labelAr: 'العملاء', icon: 'Users' },
   { path: '/products', labelEn: 'Products', labelAr: 'المنتجات', icon: 'Package' },
   { path: '/stock-order', labelEn: 'Stock Order', labelAr: 'طلبيات المخزن', icon: 'Truck' },
+  { path: '/inventory', labelEn: 'Products & Inventory', labelAr: 'المنتجات والمخزون', icon: 'Boxes' },
   { path: '/settings', labelEn: 'Settings', labelAr: 'الإعدادات', icon: 'Settings' },
 ];
