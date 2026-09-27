@@ -52,7 +52,7 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   const handleDownloadPDF = async () => {
     try {
       setIsGeneratingPdf(true);
-      await downloadInvoicePDF('printable-invoice', `Invoice_${invoice.invoice_number}.pdf`);
+      await downloadInvoicePDF(invoice, `Invoice_${invoice.invoice_number}.pdf`);
       showSuccess(isArabic ? 'تم تحميل ملف PDF بنجاح' : 'Invoice PDF downloaded successfully');
     } catch (err: any) {
       console.error('PDF Generation Error:', err);
@@ -64,19 +64,24 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/60 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-surface-900/60 backdrop-blur-sm overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-surface-200 relative my-8"
+        className="bg-white rounded-2xl max-w-3xl w-full p-3 sm:p-6 shadow-2xl border border-surface-200 relative my-2 sm:my-8"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Action Header Bar (Hidden during print) */}
-        <div className="flex items-center justify-between border-b border-surface-100 pb-4 mb-6 print:hidden">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 border-b border-surface-100 pb-4 mb-4 sm:mb-6 print:hidden">
           <div className="flex items-center gap-2">
             <span className="font-mono font-bold text-sm bg-brand-50 text-brand-700 px-3 py-1 rounded-lg border border-brand-200">
               {invoice.invoice_number}
             </span>
+            {invoice.is_bonus && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                ⭐ {isArabic ? 'بونص' : 'BONUS'}
+              </span>
+            )}
             <span className="text-xs text-surface-500 font-medium">
               {isArabic ? 'معاينة الفاتورة' : 'Invoice View'}
             </span>

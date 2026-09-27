@@ -43,8 +43,8 @@
 
 /* Print CSS Rules: Print ONLY printable invoice (#printable-invoice) or stock order (#printable-stock-order) */
 @page {
-  size: A4;
-  margin: 12mm;
+  size: A5 portrait;
+  margin: 0;
 }
 
 @media print {
@@ -55,6 +55,7 @@
     padding: 0 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    width: 100% !important;
   }
 
   /* Hide header, navigation, sidebars, buttons, and modals outside printable containers */
@@ -73,7 +74,23 @@
   }
 
   /* Position printable containers cleanly on paper */
-  #printable-invoice,
+  #printable-invoice {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 7mm 9mm !important;
+    box-sizing: border-box !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    direction: rtl !important;
+  }
+
   #printable-stock-order,
   #printable-inventory {
     position: absolute !important;
@@ -81,13 +98,28 @@
     top: 0 !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 10mm !important;
+    box-sizing: border-box !important;
     border: none !important;
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 14px !important;
-    line-height: 1.6 !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Avoid row and footer splitting across pages */
+  #printable-invoice tr,
+  #printable-stock-order tr,
+  #printable-inventory tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  #printable-invoice [data-invoice-footer],
+  #printable-invoice .invoice-footer {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   /* Force solid black text for printable content */
@@ -98,7 +130,14 @@
   }
 
   /* Table print styling: solid black borders around table and every cell */
-  #printable-invoice table,
+  #printable-invoice table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 1.5px solid #000000 !important;
+    margin-top: 8px !important;
+    margin-bottom: 10px !important;
+  }
+
   #printable-stock-order table,
   #printable-inventory table {
     width: 100% !important;
@@ -115,14 +154,21 @@
   }
 
   #printable-invoice th,
-  #printable-invoice td,
+  #printable-invoice td {
+    border: 1px solid #000000 !important;
+    padding: 4px 6px !important;
+    font-size: 10.5px !important;
+    color: #000000 !important;
+    line-height: 1.3 !important;
+  }
+
   #printable-stock-order th,
   #printable-stock-order td,
   #printable-inventory th,
   #printable-inventory td {
     border: 1px solid #000000 !important;
     padding: 8px 12px !important;
-    font-size: 14px !important;
+    font-size: 13px !important;
     color: #000000 !important;
   }
 
@@ -131,12 +177,14 @@
   #printable-inventory th {
     background-color: #f1f5f9 !important;
     font-weight: bold !important;
-    border-bottom: 2px solid #000000 !important;
+    border-bottom: 1.5px solid #000000 !important;
   }
 
   /* Customer info & totals box borders */
   #printable-invoice .bg-surface-50,
+  #printable-invoice .bg-slate-50,
   #printable-invoice .bg-emerald-50,
+  #printable-invoice .bg-emerald-100\/70,
   #printable-invoice .bg-brand-50,
   #printable-stock-order .bg-surface-50,
   #printable-inventory .bg-surface-50 {

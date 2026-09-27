@@ -8,6 +8,8 @@ export interface CreateInvoicePayload {
   discount_percentage: number;
   discount_amount: number;
   final_total: number;
+  notes?: string | null;
+  is_bonus?: boolean;
   created_by?: string | null;
   items: {
     product_id: string | null;
@@ -25,6 +27,8 @@ export interface UpdateInvoicePayload {
   discount_percentage: number;
   discount_amount: number;
   final_total: number;
+  notes?: string | null;
+  is_bonus?: boolean;
   items: {
     product_id: string | null;
     product_name_snapshot: string;
@@ -109,6 +113,8 @@ export const invoicesService = {
       .from('invoices')
       .insert({
         ...invoiceData,
+        notes: invoiceData.notes?.trim() || null,
+        is_bonus: Boolean(invoiceData.is_bonus),
         created_by: user?.id || invoiceData.created_by || null,
       })
       .select()
@@ -140,18 +146,27 @@ export const invoicesService = {
   async update(id: string, payload: UpdateInvoicePayload): Promise<Invoice> {
     const { items, ...invoiceData } = payload;
 
+    const updateHeaderPayload: Record<string, any> = {
+      customer_id: invoiceData.customer_id ?? null,
+      customer_name_snapshot: invoiceData.customer_name_snapshot,
+      subtotal: Number(invoiceData.subtotal) || 0,
+      discount_percentage: Number(invoiceData.discount_percentage) || 0,
+      discount_amount: Number(invoiceData.discount_amount) || 0,
+      final_total: Number(invoiceData.final_total) || 0,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (invoiceData.notes !== undefined) {
+      updateHeaderPayload.notes = invoiceData.notes?.trim() || null;
+    }
+    if (invoiceData.is_bonus !== undefined) {
+      updateHeaderPayload.is_bonus = Boolean(invoiceData.is_bonus);
+    }
+
     // 1. Update invoice header with explicit verification
     const { data: updatedHeaderData, error: headerError } = await supabase
       .from('invoices')
-      .update({
-        customer_id: invoiceData.customer_id ?? null,
-        customer_name_snapshot: invoiceData.customer_name_snapshot,
-        subtotal: Number(invoiceData.subtotal) || 0,
-        discount_percentage: Number(invoiceData.discount_percentage) || 0,
-        discount_amount: Number(invoiceData.discount_amount) || 0,
-        final_total: Number(invoiceData.final_total) || 0,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateHeaderPayload)
       .eq('id', id)
       .select();
 

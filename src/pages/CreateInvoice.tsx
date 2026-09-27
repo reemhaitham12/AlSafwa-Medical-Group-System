@@ -53,6 +53,8 @@ export const CreateInvoice: React.FC = () => {
   // Invoice Items & Calculations State
   const [items, setItems] = useState<InvoiceItemDraft[]>([]);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
+  const [notes, setNotes] = useState<string>('');
+  const [isBonus, setIsBonus] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -95,6 +97,8 @@ export const CreateInvoice: React.FC = () => {
           setCustomerName(inv.customer_name_snapshot || '');
           setSelectedCustomerId(inv.customer_id || null);
           setDiscountPercentage(Number(inv.discount_percentage) || 0);
+          setNotes(inv.notes || '');
+          setIsBonus(Boolean(inv.is_bonus));
 
           if (inv.items && Array.isArray(inv.items)) {
             setItems(
@@ -124,6 +128,8 @@ export const CreateInvoice: React.FC = () => {
         setSelectedCustomerId(null);
         setItems([]);
         setDiscountPercentage(0);
+        setNotes('');
+        setIsBonus(false);
         setProductSearch('');
         setSelectedProduct(null);
         setItemQty(1);
@@ -277,6 +283,8 @@ export const CreateInvoice: React.FC = () => {
     setSelectedCustomerId(null);
     setItems([]);
     setDiscountPercentage(0);
+    setNotes('');
+    setIsBonus(false);
     setProductSearch('');
     setSelectedProduct(null);
     setItemQty(1);
@@ -322,6 +330,8 @@ export const CreateInvoice: React.FC = () => {
         discount_percentage: Number(discountPercentage) || 0,
         discount_amount: discountAmount,
         final_total: finalTotal,
+        notes: notes.trim() || null,
+        is_bonus: isBonus,
         items,
       });
 
@@ -354,6 +364,8 @@ export const CreateInvoice: React.FC = () => {
         discount_percentage: Number(discountPercentage) || 0,
         discount_amount: discountAmount,
         final_total: finalTotal,
+        notes: notes.trim() || null,
+        is_bonus: isBonus,
         items: items.map((item) => ({
           product_id: item.product_id || null,
           product_name_snapshot: item.product_name_snapshot || '',
@@ -406,6 +418,11 @@ export const CreateInvoice: React.FC = () => {
               {isEditMode && <Edit3 className="w-3.5 h-3.5 text-brand-600" />}
               {nextInvoiceNumber}
             </span>
+            {isBonus && (
+              <span className="px-3 py-1 rounded-lg text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-400 flex items-center gap-1 shadow-xs">
+                ⭐ {isArabic ? 'بونص / BONUS' : 'BONUS'}
+              </span>
+            )}
           </div>
           <p className="text-xs text-surface-500 mt-0.5">
             {isEditMode
@@ -653,8 +670,89 @@ export const CreateInvoice: React.FC = () => {
 
           {/* Right 1 column: Summary & Save Button */}
           <div className="space-y-6">
+            {/* Invoice Options & Bonus Card */}
+            <Card title={isArabic ? 'خيارات الفاتورة والملاحظات' : 'Invoice Options & Notes'}>
+              <div className="space-y-4 text-xs">
+                {/* Bonus Toggle */}
+                <div className="p-3 bg-surface-50 border border-surface-200 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-surface-900 block">
+                        {isArabic ? 'فاتورة بونص (Bonus Invoice)' : 'Bonus Invoice'}
+                      </span>
+                      <span className="text-[11px] text-surface-500">
+                        {isArabic ? (isBonus ? 'مفعل (ON)' : 'غير مفعل (OFF)') : (isBonus ? 'ON' : 'OFF')}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsBonus((prev) => !prev)}
+                      className={`relative inline-flex h-6 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        isBonus ? 'bg-amber-500' : 'bg-surface-300'
+                      }`}
+                      role="switch"
+                      aria-checked={isBonus}
+                      title={isArabic ? 'تبديل حالة البونص' : 'Toggle Bonus Status'}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                          isBonus ? '-translate-x-6' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {isBonus ? (
+                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-950 space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                        <span>⭐</span>
+                        <span>{isArabic ? 'فاتورة بونص كاملة (BONUS)' : 'Bonus Invoice Enabled'}</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800 leading-relaxed">
+                        {isArabic
+                          ? 'تظل أسعار المنتجات وإجمالي الفاتورة ظاهرة كما هي، ولكن يتم استثناء قيمة الفاتورة بالكامل من إجمالي المبيعات.'
+                          : 'Product prices and total remain visible, but this invoice amount is excluded from total sales.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-surface-500">
+                      {isArabic
+                        ? 'فاتورة بيع عادية — يُحسب إجمالي قيمتها ضمن المبيعات والإيرادات.'
+                        : 'Normal sale invoice — counted towards total revenue.'}
+                    </p>
+                  )}
+                </div>
+
+                {/* Note / ملاحظة */}
+                <div>
+                  <label className="block text-xs font-semibold text-surface-700 mb-1.5">
+                    {isArabic ? 'ملاحظة الفاتورة / Note' : 'Invoice Note'}
+                    <span className="text-surface-400 font-normal mr-1">
+                      {isArabic ? '(تظهر في الطباعة وPDF)' : '(Included in PDF/Print)'}
+                    </span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder={isArabic ? 'أدخل أي ملاحظات خاصة بهذه الفاتورة...' : 'Enter invoice note...'}
+                    className="w-full text-xs p-2.5 rounded-lg border border-surface-200 bg-white text-surface-900 placeholder:text-surface-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 transition-colors resize-none"
+                    dir="rtl"
+                  />
+                </div>
+              </div>
+            </Card>
+
             <Card title={isArabic ? 'ملخص الحساب والخصم' : 'Totals & Calculations'}>
               <div className="space-y-4 text-xs">
+                {isBonus && (
+                  <div className="py-2 px-3 bg-amber-100 border border-amber-300 rounded-lg text-amber-900 font-extrabold text-center text-xs flex items-center justify-center gap-1.5">
+                    <span>⭐</span>
+                    <span>{isArabic ? 'فاتورة بونص (مستثناة من إجمالي المبيعات)' : 'Bonus Invoice (Excluded from Sales)'}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-between py-2 border-b border-surface-100">
                   <span className="text-surface-600">{isArabic ? 'المجموع الفرعي (Subtotal):' : 'Subtotal:'}</span>
                   <span className="font-bold text-surface-900 text-sm">{formatCurrency(subtotal, true)}</span>

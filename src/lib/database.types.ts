@@ -44,6 +44,8 @@ export interface Invoice {
   discount_percentage: number;
   discount_amount: number;
   final_total: number;
+  notes?: string | null;
+  is_bonus?: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;

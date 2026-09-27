@@ -53,10 +53,12 @@ export const Dashboard: React.FC = () => {
     }
   }, [isConfigured, user]);
 
-  // Real calculations
-  const totalSales = invoices.reduce((sum, inv) => sum + Number(inv.final_total || 0), 0);
+  // Real calculations: Bonus invoices (is_bonus = true) are excluded from total sales
+  const normalInvoices = invoices.filter((inv) => !inv.is_bonus);
+  const bonusInvoices = invoices.filter((inv) => Boolean(inv.is_bonus));
+  const totalSales = normalInvoices.reduce((sum, inv) => sum + Number(inv.final_total || 0), 0);
 
-  // Group sales by customer snapshot name
+  // Group sales by customer snapshot name (excluding bonus invoice amounts from revenue)
   const customerSalesMap: Record<string, CustomerSalesSummary> = {};
   invoices.forEach((inv) => {
     const name = inv.customer_name_snapshot || 'غير محدد';
@@ -64,7 +66,10 @@ export const Dashboard: React.FC = () => {
       customerSalesMap[name] = { name, invoiceCount: 0, totalSales: 0 };
     }
     customerSalesMap[name].invoiceCount += 1;
-    customerSalesMap[name].totalSales += Number(inv.final_total || 0);
+    // Only non-bonus amounts contribute to sales revenue
+    if (!inv.is_bonus) {
+      customerSalesMap[name].totalSales += Number(inv.final_total || 0);
+    }
   });
 
   const customerSalesList = Object.values(customerSalesMap).sort(
@@ -113,7 +118,14 @@ export const Dashboard: React.FC = () => {
                   <h3 className="text-xl font-extrabold text-emerald-700 mt-1">
                     {formatCurrency(totalSales, isArabic)}
                   </h3>
-                  <p className="text-[11px] text-emerald-600 mt-0.5">{isArabic ? 'مجموع الصافي من السحابة' : 'Real Supabase Revenue'}</p>
+                  <p className="text-[11px] text-emerald-600 mt-0.5">
+                    {isArabic ? 'مجموع الصافي (يستثني فواتير البونص)' : 'Revenue (Excludes Bonus)'}
+                  </p>
+                  {bonusInvoices.length > 0 && (
+                    <span className="inline-block mt-1 text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">
+                      {isArabic ? `مستثنى ${bonusInvoices.length} فواتير بونص` : `Excludes ${bonusInvoices.length} Bonus`}
+                    </span>
+                  )}
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
                   <DollarSign className="w-5 h-5" />
@@ -127,7 +139,11 @@ export const Dashboard: React.FC = () => {
                 <div>
                   <p className="text-xs font-medium text-surface-500">{isArabic ? 'عدد الفواتير الصادرة' : 'Total Invoices'}</p>
                   <h3 className="text-2xl font-bold text-surface-900 mt-1">{invoices.length}</h3>
-                  <p className="text-[11px] text-surface-400 mt-0.5">{isArabic ? 'مسجلة في Supabase' : 'Stored Invoices'}</p>
+                  <p className="text-[11px] text-surface-400 mt-0.5">
+                    {bonusInvoices.length > 0
+                      ? (isArabic ? `${normalInvoices.length} مبيعات | ${bonusInvoices.length} بونص` : `${normalInvoices.length} Sales | ${bonusInvoices.length} Bonus`)
+                      : (isArabic ? 'مسجلة في Supabase' : 'Stored Invoices')}
+                  </p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
                   <FileText className="w-5 h-5" />

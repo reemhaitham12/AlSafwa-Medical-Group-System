@@ -37,6 +37,8 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
 
   const [customerName, setCustomerName] = useState('');
   const [discountPercentage, setDiscountPercentage] = useState(0);
+  const [notes, setNotes] = useState('');
+  const [isBonus, setIsBonus] = useState(false);
   const [items, setItems] = useState<EditableItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -51,6 +53,8 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
     if (invoice) {
       setCustomerName(invoice.customer_name_snapshot || '');
       setDiscountPercentage(Number(invoice.discount_percentage) || 0);
+      setNotes(invoice.notes || '');
+      setIsBonus(Boolean(invoice.is_bonus));
       if (invoice.items && Array.isArray(invoice.items)) {
         setItems(
           invoice.items.map((it) => ({
@@ -68,6 +72,8 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
     } else {
       setCustomerName('');
       setDiscountPercentage(0);
+      setNotes('');
+      setIsBonus(false);
       setItems([]);
     }
   }, [invoice]);
@@ -159,6 +165,8 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
         discount_percentage: Number(discountPercentage) || 0,
         discount_amount: discountAmount,
         final_total: finalTotal,
+        notes: notes.trim() || null,
+        is_bonus: isBonus,
         items: items.map((item) => ({
           product_id: item.product_id || null,
           product_name_snapshot: item.product_name_snapshot || '',
@@ -194,6 +202,11 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
             <h2 className="text-lg font-bold text-surface-900">
               {isArabic ? `تعديل الفاتورة ${invoice.invoice_number}` : `Edit Invoice ${invoice.invoice_number}`}
             </h2>
+            {isBonus && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                ⭐ {isArabic ? 'بونص' : 'BONUS'}
+              </span>
+            )}
           </div>
           <button onClick={onClose} disabled={isSubmitting} className="p-1 rounded-lg text-surface-400 hover:bg-surface-100 disabled:opacity-50">
             <X className="w-5 h-5" />
@@ -201,7 +214,7 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Customer Name */}
+          {/* Customer Name & Discount */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label={isArabic ? 'اسم العميل / المستشفى' : 'Customer Name'}
@@ -219,6 +232,63 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
               onChange={(e) => setDiscountPercentage(Number(e.target.value))}
               disabled={isSubmitting}
             />
+          </div>
+
+          {/* Bonus Toggle & Notes */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-surface-50 p-4 rounded-xl border border-surface-200">
+            {/* Bonus Toggle */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-surface-900 block">
+                    {isArabic ? 'فاتورة بونص (Bonus Invoice)' : 'Bonus Invoice'}
+                  </span>
+                  <span className="text-[11px] text-surface-500">
+                    {isArabic ? (isBonus ? 'مفعل (ON)' : 'غير مفعل (OFF)') : (isBonus ? 'ON' : 'OFF')}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsBonus((prev) => !prev)}
+                  className={`relative inline-flex h-6 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    isBonus ? 'bg-amber-500' : 'bg-surface-300'
+                  }`}
+                  role="switch"
+                  aria-checked={isBonus}
+                  title={isArabic ? 'تبديل حالة البونص' : 'Toggle Bonus Status'}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      isBonus ? '-translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {isBonus && (
+                <p className="text-[10px] text-amber-800 bg-amber-100/70 p-2 rounded border border-amber-200 leading-relaxed">
+                  {isArabic
+                    ? '⭐ فاتورة بونص: تظل الأسعار معروضة بشكل طبيعي، لكن يتم استثناء المبلغ من إجمالي المبيعات.'
+                    : '⭐ Bonus: Prices remain visible, but excluded from Total Sales.'}
+                </p>
+              )}
+            </div>
+
+            {/* Note / ملاحظة */}
+            <div>
+              <label className="block text-xs font-semibold text-surface-700 mb-1">
+                {isArabic ? 'ملاحظة الفاتورة / Note' : 'Invoice Note'}
+                <span className="text-surface-400 font-normal mr-1">(تظهر في الطباعة وPDF)</span>
+              </label>
+              <textarea
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={isArabic ? 'أدخل أي ملاحظة خاصة بالفاتورة...' : 'Enter note...'}
+                className="w-full text-xs p-2 rounded-lg border border-surface-200 bg-white text-surface-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 resize-none"
+                dir="rtl"
+              />
+            </div>
           </div>
 
           {/* Add Product Search Controls */}
@@ -330,13 +400,18 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
           </div>
 
           {/* Edit Totals Summary */}
-          <div className="flex justify-between items-center bg-surface-50 p-4 rounded-xl border border-surface-200">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-surface-50 p-4 rounded-xl border border-surface-200">
             <div className="text-xs space-y-1">
               <div>المجموع الفرعي: <span className="font-bold">{formatCurrency(subtotal, true)}</span></div>
               <div>قيمة الخصم: <span className="font-bold text-amber-700">{formatCurrency(discountAmount, true)}</span></div>
+              {isBonus && (
+                <div className="text-amber-800 font-bold text-[11px]">
+                  ⭐ فاتورة بونص (لا تُحسب في إجمالي المبيعات)
+                </div>
+              )}
             </div>
 
-            <div className="text-base font-bold text-emerald-700 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-200">
+            <div className="text-base font-bold text-emerald-700 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-200 text-center">
               الصافي النهائي: {formatCurrency(finalTotal, true)}
             </div>
           </div>

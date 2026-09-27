@@ -27,6 +27,26 @@ function logSupabaseError(action: string, error: any) {
   });
 }
 
+function sanitizeUuid(id: string | null | undefined): string | null {
+  if (!id || typeof id !== 'string') return null;
+  const trimmed = id.trim();
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(trimmed) ? trimmed : null;
+}
+
+function formatErrorMessage(action: string, error: any): Error {
+  logSupabaseError(action, error);
+  const parts: string[] = [];
+  if (error?.message) parts.push(error.message);
+  if (error?.details) parts.push(`(${error.details})`);
+  if (error?.hint) parts.push(`[${error.hint}]`);
+  const fullMsg = parts.join(' ') || 'حدث خطأ في الاتصال بقاعدة البيانات';
+  const customError = new Error(fullMsg);
+  (customError as any).raw = error;
+  (customError as any).code = error?.code;
+  return customError;
+}
+
 // ─── inventory_stock CRUD ─────────────────────────────────────
 export const inventoryService = {
   // ── Stock ──────────────────────────────────────────────────
@@ -37,18 +57,17 @@ export const inventoryService = {
       .select('*')
       .order('created_at', { ascending: true });
     if (error) {
-      logSupabaseError('getAllStock', error);
-      throw error;
+      throw formatErrorMessage('getAllStock', error);
     }
     return (data || []) as InventoryStock[];
   },
 
   async createStock(payload: InventoryStockPayload): Promise<InventoryStock> {
     const sanitized = {
-      product_id: payload.product_id ? payload.product_id : null,
-      product_name_snapshot: payload.product_name_snapshot.trim(),
+      product_id: sanitizeUuid(payload.product_id),
+      product_name_snapshot: (payload.product_name_snapshot || '').trim() || 'منتج غير محدد',
       quantity: Math.max(0, Math.floor(Number(payload.quantity) || 0)),
-      expiry_date: payload.expiry_date,
+      expiry_date: payload.expiry_date.trim(),
     };
 
     console.log('[inventoryService.createStock] Sending payload to public.inventory_stock:', sanitized);
@@ -60,8 +79,7 @@ export const inventoryService = {
       .single();
 
     if (error) {
-      logSupabaseError('createStock', error);
-      throw error;
+      throw formatErrorMessage('createStock', error);
     }
     return data as InventoryStock;
   },
@@ -74,13 +92,13 @@ export const inventoryService = {
       sanitized.quantity = Math.max(0, Math.floor(Number(updates.quantity) || 0));
     }
     if (updates.expiry_date !== undefined) {
-      sanitized.expiry_date = updates.expiry_date;
+      sanitized.expiry_date = updates.expiry_date.trim();
     }
     if (updates.product_name_snapshot !== undefined) {
-      sanitized.product_name_snapshot = updates.product_name_snapshot.trim();
+      sanitized.product_name_snapshot = updates.product_name_snapshot.trim() || 'منتج غير محدد';
     }
     if (updates.product_id !== undefined) {
-      sanitized.product_id = updates.product_id ? updates.product_id : null;
+      sanitized.product_id = sanitizeUuid(updates.product_id);
     }
 
     console.log('[inventoryService.updateStock] Updating row id:', id, 'payload:', sanitized);
@@ -93,8 +111,7 @@ export const inventoryService = {
       .single();
 
     if (error) {
-      logSupabaseError('updateStock', error);
-      throw error;
+      throw formatErrorMessage('updateStock', error);
     }
     return data as InventoryStock;
   },
@@ -107,8 +124,7 @@ export const inventoryService = {
       .eq('id', id);
 
     if (error) {
-      logSupabaseError('deleteStock', error);
-      throw error;
+      throw formatErrorMessage('deleteStock', error);
     }
   },
 
@@ -120,18 +136,17 @@ export const inventoryService = {
       .select('*')
       .order('created_at', { ascending: true });
     if (error) {
-      logSupabaseError('getAllIncoming', error);
-      throw error;
+      throw formatErrorMessage('getAllIncoming', error);
     }
     return (data || []) as InventoryIncoming[];
   },
 
   async createIncoming(payload: InventoryIncomingPayload): Promise<InventoryIncoming> {
     const sanitized = {
-      product_id: payload.product_id ? payload.product_id : null,
-      product_name_snapshot: payload.product_name_snapshot.trim(),
+      product_id: sanitizeUuid(payload.product_id),
+      product_name_snapshot: (payload.product_name_snapshot || '').trim() || 'منتج غير محدد',
       quantity: Math.max(0, Math.floor(Number(payload.quantity) || 0)),
-      expiry_date: payload.expiry_date,
+      expiry_date: payload.expiry_date.trim(),
     };
 
     console.log('[inventoryService.createIncoming] Sending payload to public.inventory_incoming:', sanitized);
@@ -143,8 +158,7 @@ export const inventoryService = {
       .single();
 
     if (error) {
-      logSupabaseError('createIncoming', error);
-      throw error;
+      throw formatErrorMessage('createIncoming', error);
     }
     return data as InventoryIncoming;
   },
@@ -157,13 +171,13 @@ export const inventoryService = {
       sanitized.quantity = Math.max(0, Math.floor(Number(updates.quantity) || 0));
     }
     if (updates.expiry_date !== undefined) {
-      sanitized.expiry_date = updates.expiry_date;
+      sanitized.expiry_date = updates.expiry_date.trim();
     }
     if (updates.product_name_snapshot !== undefined) {
-      sanitized.product_name_snapshot = updates.product_name_snapshot.trim();
+      sanitized.product_name_snapshot = updates.product_name_snapshot.trim() || 'منتج غير محدد';
     }
     if (updates.product_id !== undefined) {
-      sanitized.product_id = updates.product_id ? updates.product_id : null;
+      sanitized.product_id = sanitizeUuid(updates.product_id);
     }
 
     console.log('[inventoryService.updateIncoming] Updating row id:', id, 'payload:', sanitized);
@@ -176,8 +190,7 @@ export const inventoryService = {
       .single();
 
     if (error) {
-      logSupabaseError('updateIncoming', error);
-      throw error;
+      throw formatErrorMessage('updateIncoming', error);
     }
     return data as InventoryIncoming;
   },
@@ -190,8 +203,7 @@ export const inventoryService = {
       .eq('id', id);
 
     if (error) {
-      logSupabaseError('deleteIncoming', error);
-      throw error;
+      throw formatErrorMessage('deleteIncoming', error);
     }
   },
 };

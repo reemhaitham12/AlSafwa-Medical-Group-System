@@ -146,11 +146,11 @@ const BatchModal: React.FC<BatchModalProps> = ({
       : 'إضافة وارد جديد';
 
   const subtitle = isEditing
-    ? 'تعديل كمية وتاريخ صلاحية هذه الدفعة المحددة (المنتج ثابت)'
+    ? 'تعديل الصنف والكمية وتاريخ الصلاحية لهذه الدفعة'
     : 'إضافة دفعة جديدة للمنتج وتحديد كميتها وتاريخ صلاحيتها';
 
   const isFormValid =
-    (isEditing || Boolean(form.productId)) &&
+    Boolean(form.productId || form.productNameSnapshot) &&
     Boolean(form.quantity && Number(form.quantity) >= 0) &&
     Boolean(form.expiryDate && form.expiryDate.trim());
 
@@ -190,35 +190,32 @@ const BatchModal: React.FC<BatchModalProps> = ({
           {/* Product */}
           <div>
             <label className="block text-xs font-semibold text-surface-700 mb-1.5">
-              المنتج {isEditing && <span className="text-xs text-surface-400 font-normal">(ثابت للدفعات القائمة)</span>}
+              المنتج <span className="text-red-500">*</span>
             </label>
-            {isEditing ? (
-              <div className="flex items-center justify-between rounded-lg border border-surface-200 bg-surface-50 py-2.5 px-3">
-                <span className="text-sm font-bold text-surface-900">{form.productNameSnapshot}</span>
-                <span className="text-[11px] font-semibold text-surface-500 bg-surface-200 px-2 py-0.5 rounded">
-                  المنتج الأصلي
-                </span>
-              </div>
-            ) : (
-              <select
-                className="block w-full rounded-lg border border-surface-200 bg-white py-2 px-3 text-sm text-surface-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 transition-colors"
-                value={form.productId}
-                onChange={(e) => {
-                  const selected = products.find((p) => p.id === e.target.value);
-                  onChange({
-                    productId: e.target.value,
-                    productNameSnapshot: selected?.name || '',
-                  });
-                }}
-              >
-                <option value="">-- اختر منتجاً --</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            )}
+            <select
+              className="block w-full rounded-lg border border-surface-200 bg-white py-2 px-3 text-sm text-surface-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 transition-colors"
+              value={form.productId}
+              onChange={(e) => {
+                const selected = products.find((p) => p.id === e.target.value);
+                onChange({
+                  productId: e.target.value,
+                  productNameSnapshot: selected?.name || form.productNameSnapshot,
+                });
+              }}
+            >
+              <option value="">-- اختر منتجاً --</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+              {/* If editing a product not currently in active list */}
+              {isEditing && form.productId && !products.some((p) => p.id === form.productId) && (
+                <option value={form.productId}>
+                  {form.productNameSnapshot}
+                </option>
+              )}
+            </select>
           </div>
 
           {/* Quantity */}
@@ -238,19 +235,20 @@ const BatchModal: React.FC<BatchModalProps> = ({
             <label className="block text-xs font-semibold text-surface-700 mb-1.5">
               تاريخ الصلاحية <span className="text-red-500">*</span>
               <span className="font-normal text-surface-400 mr-1">
-                (شهر / سنة — يقبل 2030 وما بعده)
+                (يوم / شهر / سنة — يقبل 2027، 2028، 2030 وما بعده)
               </span>
             </label>
             <input
-              type="month"
+              type="date"
               required
-              min="2000-01"
+              min="2000-01-01"
+              max="2099-12-31"
               className="block w-full rounded-lg border border-surface-200 bg-white py-2 px-3 text-sm text-surface-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 transition-colors"
               value={form.expiryDate}
               onChange={(e) => onChange({ expiryDate: e.target.value })}
             />
             <p className="text-[11px] text-surface-400 mt-1">
-              متاح تواريخ مستقبلية ممتدة حتى 2030 وما بعده (مثال: 2028-02، 2030-05، 2031-01)
+              متاح تحديد أي تاريخ صلاحية مستقبلي (مثال: 2028-05-15، 2030-02-01)
             </p>
           </div>
         </div>
@@ -347,7 +345,7 @@ const BatchDetailsModal: React.FC<BatchDetailsModalProps> = ({
                     </div>
                     {b.expiry_date && (
                       <p className="text-xs text-surface-500 mt-1">
-                        تاريخ الصلاحية: <span className="font-bold text-surface-700">{b.expiry_date.slice(0, 7)}</span>
+                        تاريخ الصلاحية: <span className="font-bold text-surface-700">{b.expiry_date}</span>
                       </p>
                     )}
                   </div>
@@ -404,7 +402,7 @@ const BatchDetailsModal: React.FC<BatchDetailsModalProps> = ({
                     </div>
                     {b.expiry_date && (
                       <p className="text-xs text-surface-600 mt-1">
-                        تاريخ الصلاحية: <span className="font-bold text-surface-800">{b.expiry_date.slice(0, 7)}</span>
+                        تاريخ الصلاحية: <span className="font-bold text-surface-800">{b.expiry_date}</span>
                       </p>
                     )}
                   </div>
@@ -578,14 +576,32 @@ export const Inventory: React.FC = () => {
 
   const openEditForm = (type: BatchType, batch: InventoryStock | InventoryIncoming) => {
     setDetailsProduct(null);
+    let matchedProductId = batch.product_id || '';
+    if (!matchedProductId) {
+      const match = products.find(
+        (p) => p.name.trim().toLowerCase() === batch.product_name_snapshot.trim().toLowerCase()
+      );
+      if (match) matchedProductId = match.id;
+    }
+
+    let formattedDate = '';
+    if (batch.expiry_date) {
+      const raw = batch.expiry_date.trim();
+      if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+        formattedDate = raw.slice(0, 10);
+      } else if (/^\d{4}-\d{2}$/.test(raw)) {
+        formattedDate = `${raw}-01`;
+      }
+    }
+
     setForm({
       open: true,
       type,
       editingId: batch.id,
-      productId: batch.product_id || '',
+      productId: matchedProductId,
       productNameSnapshot: batch.product_name_snapshot,
       quantity: String(batch.quantity),
-      expiryDate: batch.expiry_date ? batch.expiry_date.slice(0, 7) : '',
+      expiryDate: formattedDate,
     });
   };
 
@@ -598,18 +614,18 @@ export const Inventory: React.FC = () => {
   const normalizeExpiryDate = (input: string): string | null => {
     if (!input) return null;
     const trimmed = input.trim();
-    // Format: YYYY-MM -> YYYY-MM-01 (standard from <input type="month">)
-    if (/^\d{4}-\d{2}$/.test(trimmed)) {
-      const [year, month] = trimmed.split('-').map(Number);
-      if (month >= 1 && month <= 12 && year >= 1900 && year <= 2100) {
-        return `${trimmed}-01`;
-      }
-    }
     // Format: YYYY-MM-DD -> YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-      const d = new Date(trimmed);
-      if (!isNaN(d.getTime())) {
+      const [year, month, day] = trimmed.split('-').map(Number);
+      if (year >= 1990 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
         return trimmed;
+      }
+    }
+    // Format: YYYY-MM -> YYYY-MM-01
+    if (/^\d{4}-\d{2}$/.test(trimmed)) {
+      const [year, month] = trimmed.split('-').map(Number);
+      if (year >= 1990 && year <= 2100 && month >= 1 && month <= 12) {
+        return `${trimmed}-01`;
       }
     }
     return null;
@@ -617,8 +633,13 @@ export const Inventory: React.FC = () => {
 
   const handleFormSubmit = async () => {
     // 1. Validation
-    if (!form.editingId && !form.productId) {
-      showError('برجاء اختيار المنتج أولاً');
+    const resolvedName =
+      (form.productId ? products.find((p) => p.id === form.productId)?.name : null) ||
+      form.productNameSnapshot ||
+      '';
+
+    if (!resolvedName) {
+      showError('برجاء اختيار المنتج أو إدخال اسمه');
       return;
     }
 
@@ -635,18 +656,15 @@ export const Inventory: React.FC = () => {
 
     const expiryDate = normalizeExpiryDate(form.expiryDate);
     if (!expiryDate) {
-      showError('تاريخ الصلاحية غير صحيح (مثال: 2028-02 أو 2030-05)');
+      showError('تاريخ الصلاحية غير صحيح (مثال: 2028-05-15 أو 2030-02-01)');
       return;
     }
 
     setIsSubmitting(true);
     try {
       const payload = {
-        product_id: form.productId ? form.productId : null,
-        product_name_snapshot:
-          form.productNameSnapshot ||
-          products.find((p) => p.id === form.productId)?.name ||
-          '',
+        product_id: form.productId || null,
+        product_name_snapshot: resolvedName,
         quantity: qty,
         expiry_date: expiryDate,
       };
@@ -672,17 +690,11 @@ export const Inventory: React.FC = () => {
       closeForm();
       await fetchAll();
     } catch (err: any) {
-      console.error('Batch submit error details:', {
-        message: err?.message,
-        details: err?.details,
-        hint: err?.hint,
-        code: err?.code,
-        raw: err,
-      });
+      console.error('Batch submit error details:', err);
       const errorMsg =
         err?.message ||
         err?.details ||
-        err?.error_description ||
+        err?.hint ||
         (typeof err === 'string' ? err : 'خطأ غير معروف في حفظ الدفعة');
       showError(`فشل حفظ الدفعة: ${errorMsg}`);
     } finally {
@@ -691,7 +703,7 @@ export const Inventory: React.FC = () => {
   };
 
   const handleDeleteBatch = async (type: BatchType, id: string) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذه الدفعة؟')) return;
+    if (!window.confirm('هل أنت متأكد من حذف هذه الدفعة نهائياً؟')) return;
     try {
       if (type === 'stock') {
         await inventoryService.deleteStock(id);
@@ -703,17 +715,11 @@ export const Inventory: React.FC = () => {
       setDetailsProduct(null);
       await fetchAll();
     } catch (err: any) {
-      console.error('Delete batch error details:', {
-        message: err?.message,
-        details: err?.details,
-        hint: err?.hint,
-        code: err?.code,
-        raw: err,
-      });
+      console.error('Delete batch error details:', err);
       const errorMsg =
         err?.message ||
         err?.details ||
-        err?.error_description ||
+        err?.hint ||
         (typeof err === 'string' ? err : 'خطأ أثناء الحذف');
       showError(`فشل حذف الدفعة: ${errorMsg}`);
     }

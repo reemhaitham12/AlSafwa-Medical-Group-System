@@ -13,7 +13,7 @@ import { useToast } from '@/context/ToastContext';
 import { invoicesService } from '@/services/invoicesService';
 import type { Invoice } from '@/lib/database.types';
 import { formatCurrency, formatDate } from '@/utils/formatters';
-import { downloadInvoicePDF } from '@/utils/pdfGenerator';
+import { downloadInvoicePDF, downloadAllInvoicesPDF } from '@/utils/pdfGenerator';
 import {
   PlusCircle,
   Search,
@@ -38,6 +38,10 @@ export const Invoices: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Export All Invoices State
+  const [isExportingAll, setIsExportingAll] = useState(false);
+  const [exportProgressText, setExportProgressText] = useState('');
+
   // Modals state
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
   const [printInvoice, setPrintInvoice] = useState<Invoice | null>(null);
@@ -55,6 +59,47 @@ export const Invoices: React.FC = () => {
         document.title = originalTitle;
       }, 1000);
     }, 50);
+  };
+
+  const handleExportAllInvoices = async () => {
+    const targetList = filteredInvoices.length > 0 ? filteredInvoices : invoices;
+    if (!targetList || targetList.length === 0) {
+      showError(isArabic ? 'لا توجد فواتير لتصديرها' : 'No invoices found to export');
+      return;
+    }
+
+    try {
+      setIsExportingAll(true);
+      setExportProgressText(isArabic ? 'جاري تجهيز الفواتير...' : 'Preparing invoices...');
+
+      await downloadAllInvoicesPDF(
+        targetList,
+        'AlSafwa-All-Invoices.pdf',
+        (current, total) => {
+          setExportProgressText(
+            isArabic
+              ? `جاري إنشاء PDF (${current} من ${total})...`
+              : `Exporting PDF (${current} of ${total})...`
+          );
+        }
+      );
+
+      showSuccess(
+        isArabic
+          ? `تم تصدير ${targetList.length} فاتورة في ملف PDF واحد بنجاح`
+          : `Successfully exported ${targetList.length} invoices into one PDF`
+      );
+    } catch (err: any) {
+      console.error('Export all invoices error:', err);
+      showError(
+        isArabic
+          ? `فشل تصدير الفواتير: ${err.message || 'خطأ أثناء إنشاء ملف PDF'}`
+          : `Failed to export invoices: ${err.message || 'PDF export failed'}`
+      );
+    } finally {
+      setIsExportingAll(false);
+      setExportProgressText('');
+    }
   };
 
   const fetchInvoices = async () => {
@@ -109,15 +154,13 @@ export const Invoices: React.FC = () => {
   };
 
   const handleDownloadSinglePdf = async (inv: Invoice) => {
-    setPreviewInvoice(inv);
-    setTimeout(async () => {
-      try {
-        await downloadInvoicePDF('printable-invoice', `Invoice_${inv.invoice_number}.pdf`);
-        showSuccess(isArabic ? 'تم تحميل ملف PDF بنجاح' : 'PDF downloaded successfully');
-      } catch (err) {
-        showError(isArabic ? 'فشل تحويل الفاتورة لملف PDF' : 'PDF export failed');
-      }
-    }, 300);
+    try {
+      await downloadInvoicePDF(inv, `Invoice_${inv.invoice_number}.pdf`);
+      showSuccess(isArabic ? 'تم تحميل ملف PDF بنجاح' : 'PDF downloaded successfully');
+    } catch (err: any) {
+      console.error('Download single PDF error:', err);
+      showError(isArabic ? 'فشل تحويل الفاتورة لملف PDF' : 'PDF export failed');
+    }
   };
 
   const filteredInvoices = invoices.filter(
@@ -139,12 +182,29 @@ export const Invoices: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {invoices.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportAllInvoices}
+              isLoading={isExportingAll}
+              disabled={isExportingAll || loading}
+              icon={<Download className="w-3.5 h-3.5" />}
+              className="text-brand-700 border-brand-300 hover:bg-brand-50 shadow-xs font-semibold"
+            >
+              {isExportingAll
+                ? (exportProgressText || (isArabic ? 'جاري إنشاء ملف PDF...' : 'Generating PDF...'))
+                : (isArabic ? 'تصدير كل الفواتير PDF' : 'Export All Invoices PDF')}
+            </Button>
+          )}
+
           {invoices.length > 0 && (
             <Button
               variant="danger"
               size="sm"
               onClick={() => setShowDeleteAllModal(true)}
+              disabled={isExportingAll || loading}
               icon={<AlertOctagon className="w-3.5 h-3.5" />}
             >
               {isArabic ? 'حذف كل الفواتير' : 'Delete All Invoices'}
@@ -156,6 +216,7 @@ export const Invoices: React.FC = () => {
               size="sm"
               onClick={fetchInvoices}
               isLoading={loading}
+              disabled={isExportingAll}
               icon={<RefreshCw className="w-3.5 h-3.5" />}
             >
               {isArabic ? 'تحديث' : 'Refresh'}
@@ -203,10 +264,24 @@ export const Invoices: React.FC = () => {
                 {filteredInvoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-surface-50/80 transition-colors">
                     <td className="px-4 py-3 font-mono font-bold text-brand-600">
-                      {inv.invoice_number}
+                      <div className="flex items-center gap-1.5">
+                        <span>{inv.invoice_number}</span>
+                        {inv.is_bonus && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-extrabold rounded-md bg-amber-100 text-amber-800 border border-amber-300">
+                            ⭐ بونص
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 font-semibold text-surface-900">
-                      {inv.customer_name_snapshot}
+                      <div>
+                        <span>{inv.customer_name_snapshot}</span>
+                        {inv.notes && (
+                          <p className="text-[10px] text-surface-400 font-normal truncate max-w-[200px]" title={inv.notes}>
+                            ملاحظة: {inv.notes}
+                          </p>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-surface-500">
                       {formatDate(inv.created_at, isArabic)}
@@ -222,7 +297,14 @@ export const Invoices: React.FC = () => {
                       )}
                     </td>
                     <td className="px-4 py-3 font-bold text-emerald-600 text-sm">
-                      {formatCurrency(inv.final_total, isArabic)}
+                      <div className="flex flex-col">
+                        <span>{formatCurrency(inv.final_total, isArabic)}</span>
+                        {inv.is_bonus && (
+                          <span className="text-[9px] text-amber-700 font-semibold">
+                            (مستثنى من المبيعات)
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
