@@ -50,13 +50,19 @@ export const authService = {
       console.error('Error fetching profile:', error);
     }
 
-    if (data) return data as Profile;
+    if (data) {
+      const profileData = data as Profile;
+      // Trust database role strictly
+      const role = profileData.role || 'viewer';
+      return { ...profileData, role };
+    }
 
-    // Fallback profile if record hasn't synced yet
+    // Fallback profile if record hasn't synced yet (treat unverified fallback as viewer for safety)
     return {
       id: user.id,
       email: user.email || '',
       full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+      role: 'viewer',
       created_at: user.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

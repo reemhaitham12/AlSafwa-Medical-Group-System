@@ -30,7 +30,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 export const Invoices: React.FC = () => {
   const { isArabic } = useLanguage();
-  const { user, isConfigured } = useAuth();
+  const { user, isConfigured, isViewer } = useAuth();
   const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
 
@@ -123,6 +123,11 @@ export const Invoices: React.FC = () => {
   }, [user, isConfigured]);
 
   const handleDeleteConfirm = async () => {
+    if (isViewer) {
+      showError(isArabic ? 'غير مصرح: حساب المشاهدة لا يملك صلاحية الحذف' : 'Unauthorized: Viewer account cannot delete records');
+      setDeleteTargetInvoice(null);
+      return;
+    }
     if (!deleteTargetInvoice) return;
     try {
       setIsDeleting(true);
@@ -139,6 +144,11 @@ export const Invoices: React.FC = () => {
   };
 
   const handleDeleteAllConfirm = async () => {
+    if (isViewer) {
+      showError(isArabic ? 'غير مصرح: حساب المشاهدة لا يملك صلاحية الحذف' : 'Unauthorized: Viewer account cannot delete records');
+      setShowDeleteAllModal(false);
+      return;
+    }
     try {
       setIsDeleting(true);
       await invoicesService.deleteAll();
@@ -199,7 +209,7 @@ export const Invoices: React.FC = () => {
             </Button>
           )}
 
-          {invoices.length > 0 && (
+          {!isViewer && invoices.length > 0 && (
             <Button
               variant="danger"
               size="sm"
@@ -222,11 +232,13 @@ export const Invoices: React.FC = () => {
               {isArabic ? 'تحديث' : 'Refresh'}
             </Button>
           )}
-          <Link to="/create-invoice">
-            <Button variant="primary" size="sm" icon={<PlusCircle className="w-4 h-4" />}>
-              {isArabic ? 'فاتورة جديدة' : 'New Invoice'}
-            </Button>
-          </Link>
+          {!isViewer && (
+            <Link to="/create-invoice">
+              <Button variant="primary" size="sm" icon={<PlusCircle className="w-4 h-4" />}>
+                {isArabic ? 'فاتورة جديدة' : 'New Invoice'}
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -308,6 +320,7 @@ export const Invoices: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        {/* View Invoice button (Eye icon): ALWAYS available for all users */}
                         <button
                           onClick={() => setPreviewInvoice(inv)}
                           title={isArabic ? 'معاينة الفاتورة (عرض)' : 'View Invoice'}
@@ -316,13 +329,15 @@ export const Invoices: React.FC = () => {
                           <Eye className="w-4 h-4" />
                         </button>
 
-                        <button
-                          onClick={() => navigate(`/create-invoice?edit=${inv.id}`)}
-                          title={isArabic ? 'تعديل الفاتورة' : 'Edit Invoice'}
-                          className="p-1.5 rounded-lg text-surface-600 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
+                        {!isViewer && (
+                          <button
+                            onClick={() => navigate(`/create-invoice?edit=${inv.id}`)}
+                            title={isArabic ? 'تعديل الفاتورة' : 'Edit Invoice'}
+                            className="p-1.5 rounded-lg text-surface-600 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
 
                         <button
                           onClick={() => handlePrintInvoice(inv)}
@@ -340,13 +355,15 @@ export const Invoices: React.FC = () => {
                           <Download className="w-4 h-4" />
                         </button>
 
-                        <button
-                          onClick={() => setDeleteTargetInvoice(inv)}
-                          title={isArabic ? 'حذف الفاتورة' : 'Delete Invoice'}
-                          className="p-1.5 rounded-lg text-surface-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {!isViewer && (
+                          <button
+                            onClick={() => setDeleteTargetInvoice(inv)}
+                            title={isArabic ? 'حذف الفاتورة' : 'Delete Invoice'}
+                            className="p-1.5 rounded-lg text-surface-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

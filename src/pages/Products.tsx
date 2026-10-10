@@ -13,7 +13,7 @@ import { Package, Plus, Search } from 'lucide-react';
 
 export const Products: React.FC = () => {
   const { isArabic } = useLanguage();
-  const { user, isConfigured } = useAuth();
+  const { user, isConfigured, isViewer } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,9 +56,11 @@ export const Products: React.FC = () => {
           </p>
         </div>
 
-        <Button variant="primary" size="sm" icon={<Plus className="w-4 h-4" />}>
-          {isArabic ? 'إضافة منتج جديد' : 'Add Product'}
-        </Button>
+        {!isViewer && (
+          <Button variant="primary" size="sm" icon={<Plus className="w-4 h-4" />}>
+            {isArabic ? 'إضافة منتج جديد' : 'Add Product'}
+          </Button>
+        )}
       </div>
 
       {/* Filter */}

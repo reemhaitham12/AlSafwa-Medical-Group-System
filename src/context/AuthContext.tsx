@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { authService } from '@/services/authService';
-import type { Profile } from '@/lib/database.types';
+import type { Profile, UserRole } from '@/lib/database.types';
 
 interface AuthContextType {
   user: User | null;
@@ -10,6 +10,8 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isConfigured: boolean;
+  role: UserRole;
+  isViewer: boolean;
   login: (email: string, pass: string) => Promise<void>;
   signUp: (email: string, pass: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -103,6 +105,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const rawRole = (profile?.role || '').toLowerCase();
+  const role: UserRole = rawRole === 'admin' ? 'admin' : (rawRole === 'viewer' ? 'viewer' : 'admin');
+  const isViewer = role === 'viewer';
+
   return (
     <AuthContext.Provider
       value={{
@@ -111,6 +117,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         loading,
         isConfigured: isSupabaseConfigured,
+        role,
+        isViewer,
         login,
         signUp,
         logout,

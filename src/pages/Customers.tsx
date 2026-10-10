@@ -11,7 +11,7 @@ import { Users, Plus, Search, Phone, Mail, MapPin } from 'lucide-react';
 
 export const Customers: React.FC = () => {
   const { isArabic } = useLanguage();
-  const { isConfigured } = useAuth();
+  const { isConfigured, isViewer } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,9 +51,11 @@ export const Customers: React.FC = () => {
           </p>
         </div>
 
-        <Button variant="primary" size="sm" icon={<Plus className="w-4 h-4" />}>
-          {isArabic ? 'إضافة عميل جديد' : 'Add Customer'}
-        </Button>
+        {!isViewer && (
+          <Button variant="primary" size="sm" icon={<Plus className="w-4 h-4" />}>
+            {isArabic ? 'إضافة عميل جديد' : 'Add Customer'}
+          </Button>
+        )}
       </div>
 
       {/* Filter */}

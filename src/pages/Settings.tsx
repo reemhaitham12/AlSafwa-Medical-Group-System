@@ -9,7 +9,7 @@ import { Globe, ShieldCheck } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { isArabic, language, toggleLanguage } = useLanguage();
-  const { profile, isConfigured } = useAuth();
+  const { profile } = useAuth();
 
   return (
     <div className="space-y-6">
@@ -18,7 +18,7 @@ export const Settings: React.FC = () => {
           {isArabic ? 'إعدادات النظام والشركة' : 'System & Company Settings'}
         </h1>
         <p className="text-xs text-surface-500 mt-0.5">
-          {isArabic ? 'بيانات مجموعة الصفوة ميديكال وإعدادات اتصال السحابة' : 'AlSafwa Group profile & cloud configuration settings'}
+          {isArabic ? 'بيانات مجموعة الصفوة ميديكال وتفضيلات الحساب والواجهة' : 'AlSafwa Group organization profile, account session & preferences'}
         </p>
       </div>
 
@@ -45,30 +45,10 @@ export const Settings: React.FC = () => {
           </div>
         </Card>
 
-        {/* Database Connection */}
-        <Card title={isArabic ? 'اتصال Supabase Cloud' : 'Supabase Cloud Database Status'}>
+        {/* System & Interface Preferences */}
+        <Card title={isArabic ? 'تفضيلات النظام والواجهة' : 'System & Interface Preferences'}>
           <div className="space-y-4 text-xs">
-            <div className="p-3 rounded-lg bg-surface-50 border border-surface-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-surface-700">{isArabic ? 'حالة الإعداد' : 'Config State'}</span>
-                {isConfigured ? (
-                  <Badge variant="success" className="gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>{isArabic ? 'مفعل وجاهز' : 'Connected'}</span>
-                  </Badge>
-                ) : (
-                  <Badge variant="warning">{isArabic ? 'مطلوب إدخال المفاتيح' : 'Env Missing'}</Badge>
-                )}
-              </div>
-              <div className="flex justify-between text-surface-500">
-                <span>VITE_SUPABASE_URL</span>
-                <span className="font-mono text-[11px]">
-                  {import.meta.env.VITE_SUPABASE_URL ? '••••••••.supabase.co' : 'Not Set'}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between py-2">
               <div>
                 <p className="font-semibold text-surface-900">{isArabic ? 'لغة الواجهة' : 'Interface Language'}</p>
                 <p className="text-surface-500">{language === 'ar' ? 'العربية (RTL)' : 'English (LTR)'}</p>
@@ -90,6 +70,85 @@ export const Settings: React.FC = () => {
             <div className="flex justify-between py-2 border-b border-surface-100">
               <span className="text-surface-500">{isArabic ? 'البريد الإلكتروني' : 'Email'}</span>
               <span className="font-semibold text-surface-900">{profile?.email || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between py-2">
+              <span className="text-surface-500">{isArabic ? 'صلاحية الحساب' : 'Account Role'}</span>
+              <span className="font-semibold">
+                {profile?.role === 'viewer' ? (
+                  <Badge variant="warning">{isArabic ? 'مشاهدة فقط (Viewer)' : 'View-Only (Viewer)'}</Badge>
+                ) : (
+                  <Badge variant="brand">{isArabic ? 'مدير كامل الصلاحيات (Admin)' : 'Administrator'}</Badge>
+                )}
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        {/* Viewer Account Security Card (For Admin/Owner) */}
+        <Card
+          title={isArabic ? 'إدارة حساب المشاهدة (View-Only Viewer Account)' : 'Viewer Account Configuration'}
+          subtitle={
+            isArabic
+              ? 'صلاحيات الحساب للقراءة والاستعراض فقط بدون تعديل أو حذف ومع إخفاء إجمالي المبيعات'
+              : 'Read-only access configuration with hidden Total Sales metrics'
+          }
+          className="lg:col-span-2"
+        >
+          <div className="space-y-3 text-xs text-surface-600">
+            <div className="p-3.5 bg-slate-50 border border-surface-200 rounded-xl space-y-2">
+              <div className="flex items-center gap-2 text-surface-900 font-bold text-sm">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>
+                  {isArabic
+                    ? 'سياسة أمان حساب المشاهد (View-Only Security & Permissions)'
+                    : 'Viewer Account Security Policy'}
+                </span>
+              </div>
+              <ul className="list-disc list-inside space-y-1 text-surface-600 text-xs">
+                <li>
+                  {isArabic
+                    ? 'يستطيع استعراض جميع الفواتير وقائمة المنتجات والعملاء وطلبيات المخزن والمخزون.'
+                    : 'Can browse invoices, products catalog, customers directory, stock orders, and inventory.'}
+                </li>
+                <li>
+                  {isArabic
+                    ? 'زر المعاينة (أيقونة العين 👁️) وطباعة الفاتورة وتحميل PDF مفعل بالكامل لعرض الفاتورة.'
+                    : 'View Invoice (eye icon), Print, and PDF download remain fully enabled.'}
+                </li>
+                <li>
+                  {isArabic
+                    ? 'يتم إخفاء بطاقة "إجمالي المبيعات" وتحليلات المبيعات المالية بالكامل من لوحة التحكم.'
+                    : 'Total Sales metric card and monetary sales breakdown are completely hidden from Dashboard.'}
+                </li>
+                <li>
+                  {isArabic
+                    ? 'محمية ومؤمنة على مستوى قاعدة بيانات Supabase RLS وسياسات الحماية ضد أي محاولات إضافة أو تعديل أو حذف مباشرة.'
+                    : 'Enforced at both UI layer and Supabase PostgreSQL RLS level against unauthorized write attempts.'}
+                </li>
+              </ul>
+            </div>
+
+            <div className="p-3 bg-brand-50 border border-brand-200 rounded-xl text-brand-900">
+              <p className="font-bold mb-1">
+                {isArabic ? '📌 خطوات إنشاء أو تعيين حساب المشاهدة:' : '📌 Setup & Assignment Steps:'}
+              </p>
+              <ol className="list-decimal list-inside space-y-1 text-[11px] text-brand-800">
+                <li>
+                  {isArabic
+                    ? 'في لوحة تحكم Supabase > Authentication > Users: أضف بريد وكلمة مرور الحساب الجديد.'
+                    : 'In Supabase Dashboard > Authentication > Users: add the new user email & password.'}
+                </li>
+                <li>
+                  {isArabic
+                    ? 'في محرر SQL Editor قم بتشغيل ملف الهجرة supabase/viewer_role_migration.sql.'
+                    : 'In Supabase SQL Editor: execute supabase/viewer_role_migration.sql.'}
+                </li>
+                <li>
+                  {isArabic
+                    ? "لتعيين الدور كمشاهد قم بتنفيذ: UPDATE profiles SET role = 'viewer' WHERE email = 'viewer@alsafwa.com';"
+                    : "Assign viewer role via SQL: UPDATE profiles SET role = 'viewer' WHERE email = 'viewer@alsafwa.com';"}
+                </li>
+              </ol>
             </div>
           </div>
         </Card>

@@ -63,6 +63,29 @@ npm run dev
 
 ---
 
+## 👥 Roles & View-Only Viewer Account
+
+The system supports role-based access control (RBAC):
+- **`admin`**: Full access to create, update, delete invoices, products, customers, and inventory. Sees all monetary figures including **Total Sales** on the Dashboard.
+- **`viewer`**: Read-only access.
+  - Can browse Dashboard, Invoices, Customers, Products, Stock Orders, and Products & Inventory.
+  - **Invoice View (Eye icon 👁️)**, Print, and PDF download remain active and available.
+  - **Total Sales** metric card and monetary breakdown are hidden from the Dashboard.
+  - All write actions (create, edit, delete, delete all) are disabled and removed from the UI.
+  - Row Level Security (RLS) policies block unauthorized direct Supabase mutations for viewers.
+
+### Setting Up a Viewer Account in Supabase
+1. Run [`supabase/viewer_role_migration.sql`](file:///f:/Safwa/supabase/viewer_role_migration.sql) in your **Supabase SQL Editor**.
+2. Create the user in **Supabase Dashboard > Authentication > Users** with email & password.
+3. Assign the viewer role:
+   ```sql
+   UPDATE public.profiles
+   SET role = 'viewer', full_name = 'حساب المشاهدة'
+   WHERE email = 'viewer@alsafwa.com';
+   ```
+
+---
+
 ## 🚀 Vercel Deployment
 
 1. Push your repository to GitHub or GitLab.

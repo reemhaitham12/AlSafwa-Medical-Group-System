@@ -279,6 +279,7 @@ interface BatchDetailsModalProps {
   productName: string;
   stockBatches: InventoryStock[];
   incomingBatches: InventoryIncoming[];
+  isViewer?: boolean;
   onClose: () => void;
   onEditBatch: (type: BatchType, batch: InventoryStock | InventoryIncoming) => void;
   onDeleteBatch: (type: BatchType, id: string) => void;
@@ -288,6 +289,7 @@ const BatchDetailsModal: React.FC<BatchDetailsModalProps> = ({
   productName,
   stockBatches,
   incomingBatches,
+  isViewer = false,
   onClose,
   onEditBatch,
   onDeleteBatch,
@@ -349,24 +351,26 @@ const BatchDetailsModal: React.FC<BatchDetailsModalProps> = ({
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => onEditBatch('stock', b)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 transition-colors shadow-xs"
-                      title="تعديل هذه الدفعة"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      <span>تعديل</span>
-                    </button>
-                    <button
-                      onClick={() => onDeleteBatch('stock', b.id)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
-                      title="حذف هذه الدفعة"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>حذف</span>
-                    </button>
-                  </div>
+                  {!isViewer && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onEditBatch('stock', b)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 transition-colors shadow-xs"
+                        title="تعديل هذه الدفعة"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span>تعديل</span>
+                      </button>
+                      <button
+                        onClick={() => onDeleteBatch('stock', b.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                        title="حذف هذه الدفعة"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>حذف</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -406,24 +410,26 @@ const BatchDetailsModal: React.FC<BatchDetailsModalProps> = ({
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => onEditBatch('incoming', b)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-brand-700 bg-white hover:bg-brand-50 border border-brand-200 transition-colors shadow-xs"
-                      title="تعديل هذه الدفعة"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      <span>تعديل</span>
-                    </button>
-                    <button
-                      onClick={() => onDeleteBatch('incoming', b.id)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
-                      title="حذف هذه الدفعة"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>حذف</span>
-                    </button>
-                  </div>
+                  {!isViewer && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onEditBatch('incoming', b)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-brand-700 bg-white hover:bg-brand-50 border border-brand-200 transition-colors shadow-xs"
+                        title="تعديل هذه الدفعة"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span>تعديل</span>
+                      </button>
+                      <button
+                        onClick={() => onDeleteBatch('incoming', b.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                        title="حذف هذه الدفعة"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>حذف</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -454,7 +460,7 @@ const EMPTY_FORM: BatchFormState = {
 
 export const Inventory: React.FC = () => {
   const { isArabic } = useLanguage();
-  const { user, isConfigured } = useAuth();
+  const { user, isConfigured, isViewer } = useAuth();
   const { showSuccess, showError } = useToast();
 
   // ── Date filter (same as StockOrder) ───────────────────────
@@ -632,6 +638,12 @@ export const Inventory: React.FC = () => {
   };
 
   const handleFormSubmit = async () => {
+    if (isViewer) {
+      showError('غير مصرح: حساب المشاهدة لا يملك صلاحية حفظ أو تعديل دفعات المخزون');
+      closeForm();
+      return;
+    }
+
     // 1. Validation
     const resolvedName =
       (form.productId ? products.find((p) => p.id === form.productId)?.name : null) ||
@@ -703,6 +715,10 @@ export const Inventory: React.FC = () => {
   };
 
   const handleDeleteBatch = async (type: BatchType, id: string) => {
+    if (isViewer) {
+      showError('غير مصرح: حساب المشاهدة لا يملك صلاحية حذف الدفعات');
+      return;
+    }
     if (!window.confirm('هل أنت متأكد من حذف هذه الدفعة نهائياً؟')) return;
     try {
       if (type === 'stock') {
@@ -759,7 +775,7 @@ export const Inventory: React.FC = () => {
   return (
     <div className="space-y-6" dir="rtl">
       {/* ── Modals ─────────────────────────────────────────── */}
-      {form.open && (
+      {!isViewer && form.open && (
         <BatchModal
           form={form}
           products={products}
@@ -775,6 +791,7 @@ export const Inventory: React.FC = () => {
           productName={detailsRow.productName}
           stockBatches={detailsRow.stockBatches}
           incomingBatches={detailsRow.incomingBatches}
+          isViewer={isViewer}
           onClose={() => setDetailsProduct(null)}
           onEditBatch={openEditForm}
           onDeleteBatch={handleDeleteBatch}
@@ -795,22 +812,26 @@ export const Inventory: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 print:hidden flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => openAddForm('stock')}
-            icon={<Plus className="w-4 h-4" />}
-          >
-            {isArabic ? 'إضافة مخزون' : 'Add Stock'}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => openAddForm('incoming')}
-            icon={<Plus className="w-4 h-4" />}
-          >
-            {isArabic ? 'إضافة وارد' : 'Add Incoming'}
-          </Button>
+          {!isViewer && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openAddForm('stock')}
+                icon={<Plus className="w-4 h-4" />}
+              >
+                {isArabic ? 'إضافة مخزون' : 'Add Stock'}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => openAddForm('incoming')}
+                icon={<Plus className="w-4 h-4" />}
+              >
+                {isArabic ? 'إضافة وارد' : 'Add Incoming'}
+              </Button>
+            </>
+          )}
           <Button
             variant="outline"
             size="sm"

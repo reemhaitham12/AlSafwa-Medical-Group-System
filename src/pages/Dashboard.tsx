@@ -28,7 +28,7 @@ interface CustomerSalesSummary {
 
 export const Dashboard: React.FC = () => {
   const { isArabic } = useLanguage();
-  const { user, profile, isConfigured } = useAuth();
+  const { user, profile, isConfigured, isViewer } = useAuth();
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [productCount, setProductCount] = useState<number>(0);
@@ -85,6 +85,11 @@ export const Dashboard: React.FC = () => {
             <h1 className="text-xl font-bold text-surface-900">
               {isArabic ? `مرحباً بك، ${profile?.full_name || 'الصفوة ميديكال'}` : `Welcome back, ${profile?.full_name || 'AlSafwa User'}`}
             </h1>
+            {isViewer && (
+              <Badge variant="neutral" className="text-[10px] font-bold">
+                {isArabic ? 'حساب عرض فقط (Viewer)' : 'View-Only (Viewer)'}
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-surface-500">
             {isArabic
@@ -93,15 +98,17 @@ export const Dashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link
-            to="/create-invoice"
-            className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>{isArabic ? 'إنشاء فاتورة جديدة' : 'Create New Invoice'}</span>
-          </Link>
-        </div>
+        {!isViewer && (
+          <div className="flex items-center gap-3">
+            <Link
+              to="/create-invoice"
+              className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>{isArabic ? 'إنشاء فاتورة جديدة' : 'Create New Invoice'}</span>
+            </Link>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -109,29 +116,31 @@ export const Dashboard: React.FC = () => {
       ) : (
         <>
           {/* Quick Overview Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Total Sales */}
-            <Card className="hover:border-emerald-300 bg-emerald-50/30">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-emerald-800">{isArabic ? 'إجمالي اﻹيرادات والمبيعات' : 'Overall Total Sales'}</p>
-                  <h3 className="text-xl font-extrabold text-emerald-700 mt-1">
-                    {formatCurrency(totalSales, isArabic)}
-                  </h3>
-                  <p className="text-[11px] text-emerald-600 mt-0.5">
-                    {isArabic ? 'مجموع الصافي (يستثني فواتير البونص)' : 'Revenue (Excludes Bonus)'}
-                  </p>
-                  {bonusInvoices.length > 0 && (
-                    <span className="inline-block mt-1 text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">
-                      {isArabic ? `مستثنى ${bonusInvoices.length} فواتير بونص` : `Excludes ${bonusInvoices.length} Bonus`}
-                    </span>
-                  )}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${isViewer ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-4`}>
+            {/* Total Sales (Hidden for viewer) */}
+            {!isViewer && (
+              <Card className="hover:border-emerald-300 bg-emerald-50/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-emerald-800">{isArabic ? 'إجمالي اﻹيرادات والمبيعات' : 'Overall Total Sales'}</p>
+                    <h3 className="text-xl font-extrabold text-emerald-700 mt-1">
+                      {formatCurrency(totalSales, isArabic)}
+                    </h3>
+                    <p className="text-[11px] text-emerald-600 mt-0.5">
+                      {isArabic ? 'مجموع الصافي (يستثني فواتير البونص)' : 'Revenue (Excludes Bonus)'}
+                    </p>
+                    {bonusInvoices.length > 0 && (
+                      <span className="inline-block mt-1 text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">
+                        {isArabic ? `مستثنى ${bonusInvoices.length} فواتير بونص` : `Excludes ${bonusInvoices.length} Bonus`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                    <DollarSign className="w-5 h-5" />
+                  </div>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                  <DollarSign className="w-5 h-5" />
-                </div>
-              </div>
-            </Card>
+              </Card>
+            )}
 
             {/* Total Invoices */}
             <Card className="hover:border-brand-300">
@@ -181,7 +190,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Customer Sales Breakdown Table */}
-          <Card title={isArabic ? 'تحليل مبيعات العملاء والمستشفيات (Real Supabase Data)' : 'Customer Sales Breakdown'}>
+          <Card title={isArabic ? 'تحليل عملاء ومستشفيات الفواتير' : 'Customer Activity Breakdown'}>
             {customerSalesList.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-right">
@@ -189,7 +198,9 @@ export const Dashboard: React.FC = () => {
                     <tr>
                       <th className="px-4 py-3">{isArabic ? 'اسم العميل / الجهة' : 'Customer Name'}</th>
                       <th className="px-4 py-3 text-center">{isArabic ? 'عدد الفواتير الصادرة' : 'Invoices Count'}</th>
-                      <th className="px-4 py-3 text-left">{isArabic ? 'إجمالي المبيعات' : 'Total Sales'}</th>
+                      {!isViewer && (
+                        <th className="px-4 py-3 text-left">{isArabic ? 'إجمالي المبيعات' : 'Total Sales'}</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-100">
@@ -199,9 +210,11 @@ export const Dashboard: React.FC = () => {
                         <td className="px-4 py-3 text-center">
                           <Badge variant="brand">{item.invoiceCount}</Badge>
                         </td>
-                        <td className="px-4 py-3 text-left font-extrabold text-emerald-700">
-                          {formatCurrency(item.totalSales, isArabic)}
-                        </td>
+                        {!isViewer && (
+                          <td className="px-4 py-3 text-left font-extrabold text-emerald-700">
+                            {formatCurrency(item.totalSales, isArabic)}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

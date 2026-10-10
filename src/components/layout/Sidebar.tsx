@@ -22,18 +22,20 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const { isArabic } = useLanguage();
-  const { profile, logout } = useAuth();
+  const { profile, logout, isViewer } = useAuth();
 
-  const navItems = [
+  const allNavItems = [
     { path: '/dashboard', label: isArabic ? 'لوحة التحكم' : 'Dashboard', icon: LayoutDashboard },
     { path: '/invoices', label: isArabic ? 'الفواتير' : 'Invoices', icon: FileText },
-    { path: '/create-invoice', label: isArabic ? 'إنشاء فاتورة' : 'Create Invoice', icon: PlusCircle },
+    { path: '/create-invoice', label: isArabic ? 'إنشاء فاتورة' : 'Create Invoice', icon: PlusCircle, adminOnly: true },
     { path: '/customers', label: isArabic ? 'العملاء' : 'Customers', icon: Users },
     { path: '/products', label: isArabic ? 'المنتجات' : 'Products', icon: Package },
     { path: '/stock-order', label: isArabic ? 'طلبيات المخزن' : 'Stock Order', icon: Truck },
     { path: '/inventory', label: isArabic ? 'المنتجات والمخزون' : 'Products & Inventory', icon: Boxes },
     { path: '/settings', label: isArabic ? 'الإعدادات' : 'Settings', icon: Settings },
   ];
+
+  const navItems = allNavItems.filter((item) => !(isViewer && item.adminOnly));
 
   return (
     <aside className="w-64 bg-white border-r border-surface-200 flex flex-col h-full select-none shrink-0">
@@ -80,9 +82,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       <div className="p-4 border-t border-surface-100 bg-surface-50/50">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-surface-900 truncate">
-              {profile?.full_name || 'AlSafwa User'}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-semibold text-surface-900 truncate">
+                {profile?.full_name || 'AlSafwa User'}
+              </p>
+              {isViewer ? (
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">
+                  {isArabic ? 'مشاهدة' : 'Viewer'}
+                </span>
+              ) : (
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-brand-100 text-brand-700">
+                  {isArabic ? 'مدير' : 'Admin'}
+                </span>
+              )}
+            </div>
             <p className="text-[11px] text-surface-500 truncate">
               {profile?.email || 'Single Account'}
             </p>

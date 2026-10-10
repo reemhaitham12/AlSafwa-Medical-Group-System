@@ -25,13 +25,25 @@ interface InvoiceItemDraft {
 
 export const CreateInvoice: React.FC = () => {
   const { isArabic } = useLanguage();
-  const { user, isConfigured } = useAuth();
+  const { user, isConfigured, isViewer } = useAuth();
   const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const editInvoiceId = searchParams.get('edit');
   const isEditMode = Boolean(editInvoiceId);
+
+  // If a viewer navigates to /create-invoice, redirect them back to /invoices
+  useEffect(() => {
+    if (isViewer) {
+      showError(
+        isArabic
+          ? 'غير مصرح: حساب المشاهدة لا يملك صلاحية إنشاء أو تعديل الفواتير'
+          : 'Unauthorized: Viewer role cannot create or edit invoices'
+      );
+      navigate('/invoices', { replace: true });
+    }
+  }, [isViewer, navigate, isArabic, showError]);
 
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState('INV-000001');
 
@@ -301,6 +313,11 @@ export const CreateInvoice: React.FC = () => {
     e.preventDefault();
 
     if (isSubmitting) return;
+
+    if (isViewer) {
+      showError(isArabic ? 'غير مصرح: حساب المشاهدة لا يملك صلاحية حفظ الفواتير' : 'Unauthorized: Viewer account cannot save invoices');
+      return;
+    }
 
     if (!customerName.trim()) {
       showError(isArabic ? 'برجاء إدخال اسم العميل أو المشتري' : 'Please enter customer name');

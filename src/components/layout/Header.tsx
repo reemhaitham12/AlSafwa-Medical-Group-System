@@ -55,10 +55,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
             {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
           </div>
           <div className="hidden lg:block text-right">
-            <span className="block text-xs font-semibold text-surface-900 leading-tight">
-              {profile?.full_name || 'Staff User'}
-            </span>
-            <span className="block text-[10px] text-surface-500 leading-none">
+            <div className="flex items-center gap-1.5 justify-end">
+              <span className="block text-xs font-semibold text-surface-900 leading-tight">
+                {profile?.full_name || 'Staff User'}
+              </span>
+              <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                profile?.role === 'viewer'
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-brand-100 text-brand-700'
+              }`}>
+                {profile?.role === 'viewer' ? (isArabic ? 'مشاهدة' : 'Viewer') : (isArabic ? 'مدير' : 'Admin')}
+              </span>
+            </div>
+            <span className="block text-[10px] text-surface-500 leading-none mt-0.5">
               {profile?.email}
             </span>
           </div>
