@@ -15,6 +15,7 @@ import { Customers } from '@/pages/Customers';
 import { Products } from '@/pages/Products';
 import { StockOrder } from '@/pages/StockOrder';
 import { Inventory } from '@/pages/Inventory';
+import { ProductDemandDetails } from '@/pages/ProductDemandDetails';
 import { Settings } from '@/pages/Settings';
 
 export const App: React.FC = () => {
@@ -40,6 +41,7 @@ export const App: React.FC = () => {
                 <Route path="/create-invoice" element={<CreateInvoice />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/products" element={<Products />} />
+                <Route path="/products/:id" element={<ProductDemandDetails />} />
                 <Route path="/stock-order" element={<StockOrder />} />
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/settings" element={<Settings />} />

@@ -69,7 +69,9 @@
   #printable-stock-order,
   #printable-stock-order *,
   #printable-inventory,
-  #printable-inventory * {
+  #printable-inventory *,
+  #printable-demand-report,
+  #printable-demand-report * {
     visibility: visible !important;
   }
 
@@ -108,10 +110,45 @@
     line-height: 1.5 !important;
   }
 
+  #printable-demand-report {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  #printable-demand-report .a4-report-page {
+    page-break-after: always !important;
+    break-after: page !important;
+    width: 100% !important;
+    max-width: 210mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    height: 297mm !important;
+    padding: 8mm 10mm !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  #printable-demand-report .a4-report-page:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
   /* Avoid row and footer splitting across pages */
   #printable-invoice tr,
   #printable-stock-order tr,
-  #printable-inventory tr {
+  #printable-inventory tr,
+  #printable-demand-report tr {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
@@ -125,7 +162,8 @@
   /* Force solid black text for printable content */
   #printable-invoice *,
   #printable-stock-order *,
-  #printable-inventory * {
+  #printable-inventory *,
+  #printable-demand-report * {
     color: #000000 !important;
   }
 
