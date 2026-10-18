@@ -33,6 +33,7 @@ export async function downloadDemandDistributionPDF(
   const PAGE_WIDTH_MM = 210;
   const PAGE_HEIGHT_MM = 297;
   const FIXED_WIDTH_PX = 794;
+  const FIXED_HEIGHT_PX = 1123;
 
   // We temporarily isolate each page in a fixed-width container off-screen
   // to ensure identical font rendering regardless of user zoom or viewport width.
@@ -43,6 +44,7 @@ export async function downloadDemandDistributionPDF(
   wrapper.style.width = `${FIXED_WIDTH_PX}px`;
   wrapper.style.direction = 'rtl';
   wrapper.style.backgroundColor = '#ffffff';
+  wrapper.style.fontFamily = 'Cairo, system-ui, -apple-system, sans-serif';
   wrapper.style.zIndex = '-9999';
   document.body.appendChild(wrapper);
 
@@ -56,6 +58,8 @@ export async function downloadDemandDistributionPDF(
       const clone = origPage.cloneNode(true) as HTMLElement;
       clone.style.width = `${FIXED_WIDTH_PX}px`;
       clone.style.maxWidth = `${FIXED_WIDTH_PX}px`;
+      clone.style.height = `${FIXED_HEIGHT_PX}px`;
+      clone.style.maxHeight = `${FIXED_HEIGHT_PX}px`;
       clone.style.margin = '0';
       clone.style.boxSizing = 'border-box';
 

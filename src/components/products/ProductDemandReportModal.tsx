@@ -330,19 +330,19 @@ export const ProductDemandReportModal: React.FC<ProductDemandReportModalProps> =
                           {/* Quadrant Header */}
                           <div>
                             {/* Product Title Bar */}
-                            <div className="flex items-start justify-between gap-1.5 border-b border-slate-300 pb-1.5 mb-1.5">
+                            <div className="flex items-start justify-between gap-1.5 border-b border-slate-300 pb-1.5 mb-2">
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <h3 className="font-black text-[12px] text-slate-950 leading-snug line-clamp-1">
+                                  <h3 className="font-black text-[12px] text-slate-950 leading-normal line-clamp-1">
                                     {q.productName}
                                   </h3>
                                   {q.isContinued && (
-                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300">
+                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 leading-none">
                                       (تابع {q.chunkIndex + 1}/{q.totalChunks})
                                     </span>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2 mt-0.5 text-[9.5px] text-slate-500 font-mono">
+                                <div className="flex items-center gap-2 mt-0.5 text-[9.5px] text-slate-500 font-mono leading-normal">
                                   {q.productCode && (
                                     <span className="font-bold text-brand-700">كود: {q.productCode}</span>
                                   )}
@@ -352,28 +352,28 @@ export const ProductDemandReportModal: React.FC<ProductDemandReportModalProps> =
                             </div>
 
                             {/* Metrics Summary Strip (4 KPI Cells) */}
-                            <div className="grid grid-cols-4 gap-1 mb-2 text-center text-[10px]">
+                            <div className="grid grid-cols-4 gap-1.5 mb-2 text-center text-[10px]">
                               {/* Requested */}
-                              <div className="bg-slate-100 p-1 rounded border border-slate-300">
-                                <span className="block text-slate-600 text-[8.5px] font-semibold">المطلوب</span>
-                                <span className="font-black text-slate-900 text-xs font-mono">{q.totalRequested}</span>
+                              <div className="bg-slate-100 py-1 px-1.5 rounded border border-slate-300">
+                                <span className="block text-slate-600 text-[8.5px] font-semibold leading-normal">المطلوب</span>
+                                <span className="font-black text-slate-900 text-xs font-mono leading-normal">{q.totalRequested}</span>
                               </div>
 
                               {/* Current Stock */}
-                              <div className="bg-slate-100 p-1 rounded border border-slate-300">
-                                <span className="block text-slate-600 text-[8.5px] font-semibold">المخزون</span>
-                                <span className="font-black text-slate-900 text-xs font-mono">{q.currentStock}</span>
+                              <div className="bg-slate-100 py-1 px-1.5 rounded border border-slate-300">
+                                <span className="block text-slate-600 text-[8.5px] font-semibold leading-normal">المخزون</span>
+                                <span className="font-black text-slate-900 text-xs font-mono leading-normal">{q.currentStock}</span>
                               </div>
 
                               {/* Incoming */}
-                              <div className="bg-emerald-50 p-1 rounded border border-emerald-300">
-                                <span className="block text-emerald-800 text-[8.5px] font-semibold">الوارد</span>
-                                <span className="font-black text-emerald-950 text-xs font-mono">{q.incoming}</span>
+                              <div className="bg-emerald-50 py-1 px-1.5 rounded border border-emerald-300">
+                                <span className="block text-emerald-800 text-[8.5px] font-semibold leading-normal">الوارد</span>
+                                <span className="font-black text-emerald-950 text-xs font-mono leading-normal">{q.incoming}</span>
                               </div>
 
                               {/* Net Shortage / Surplus */}
                               <div
-                                className={`p-1 rounded border ${
+                                className={`py-1 px-1.5 rounded border ${
                                   hasShortage
                                     ? 'bg-red-50 border-red-300 text-red-700'
                                     : hasSurplus
@@ -381,10 +381,10 @@ export const ProductDemandReportModal: React.FC<ProductDemandReportModalProps> =
                                     : 'bg-slate-100 border-slate-300 text-slate-700'
                                 }`}
                               >
-                                <span className="block text-[8.5px] font-semibold">
+                                <span className="block text-[8.5px] font-semibold leading-normal">
                                   {hasShortage ? 'عجز' : hasSurplus ? 'فائض' : 'الرصيد'}
                                 </span>
-                                <span className="font-black text-xs font-mono">
+                                <span className="font-black text-xs font-mono leading-normal">
                                   {hasShortage
                                     ? `-${net}`
                                     : hasSurplus
@@ -396,39 +396,39 @@ export const ProductDemandReportModal: React.FC<ProductDemandReportModalProps> =
 
                             {/* Customer Demand Table */}
                             <div className="overflow-hidden border border-slate-900 rounded">
-                              <table className="w-full text-[10px] border-collapse">
+                              <table className="w-full text-[10.5px] border-collapse">
                                 <thead>
                                   <tr className="bg-slate-200 text-slate-950 font-bold border-b border-slate-900">
-                                    <th className="py-1 px-1.5 text-right border-l border-slate-900">العميل</th>
-                                    <th className="py-1 px-1 text-center border-l border-slate-900 w-24">الفاتورة</th>
-                                    <th className="py-1 px-1.5 text-center w-14">الكمية</th>
+                                    <th className="py-1.5 px-2.5 text-right border-l border-slate-900 leading-normal align-middle">العميل</th>
+                                    <th className="py-1.5 px-2 text-center border-l border-slate-900 w-24 leading-normal align-middle">الفاتورة</th>
+                                    <th className="py-1.5 px-2 text-center w-14 leading-normal align-middle">الكمية</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-300">
                                   {q.customerRows && q.customerRows.length > 0 ? (
                                     q.customerRows.map((row, rIdx) => (
                                       <tr key={rIdx} className="hover:bg-slate-50">
-                                        <td className="py-1 px-1.5 text-right font-medium text-slate-900 truncate max-w-[150px] border-l border-slate-300">
+                                        <td className="py-1.5 px-2.5 text-right font-medium text-slate-900 border-l border-slate-300 leading-normal align-middle break-words">
                                           {row.customerName}
                                         </td>
-                                        <td className="py-1 px-1 text-center font-mono text-[9px] text-slate-700 border-l border-slate-300">
+                                        <td className="py-1.5 px-1.5 text-center font-mono text-[9px] text-slate-700 border-l border-slate-300 leading-normal align-middle">
                                           <div className="flex items-center justify-center gap-1">
                                             <span>{row.invoiceNumber}</span>
                                             {row.isBonus && (
-                                              <span className="text-[8px] bg-amber-100 text-amber-800 px-1 rounded font-bold">
+                                              <span className="text-[8px] bg-amber-100 text-amber-800 px-1 py-0.5 rounded font-bold leading-none">
                                                 بونص
                                               </span>
                                             )}
                                           </div>
                                         </td>
-                                        <td className="py-1 px-1.5 text-center font-extrabold text-brand-700 font-mono text-[10.5px]">
+                                        <td className="py-1.5 px-2 text-center font-extrabold text-brand-700 font-mono text-[10.5px] leading-normal align-middle">
                                           {row.quantity}
                                         </td>
                                       </tr>
                                     ))
                                   ) : (
                                     <tr>
-                                      <td colSpan={3} className="py-4 text-center text-slate-400 text-[10px]">
+                                      <td colSpan={3} className="py-5 text-center text-slate-400 text-[10px] leading-relaxed">
                                         لا توجد طلبات فواتير مسجلة لهذا الصنف
                                       </td>
                                     </tr>
@@ -439,22 +439,22 @@ export const ProductDemandReportModal: React.FC<ProductDemandReportModalProps> =
                           </div>
 
                           {/* Quadrant Footer */}
-                          <div className="pt-1.5 border-t border-slate-300 mt-1 flex items-center justify-between text-[10px]">
+                          <div className="pt-2 border-t border-slate-300 mt-2 flex items-center justify-between text-[10px] leading-normal">
                             {q.hasMoreChunks ? (
-                              <span className="text-[9px] text-amber-800 font-bold">
+                              <span className="text-[9px] text-amber-800 font-bold leading-normal">
                                 الدفعة: {q.chunkSubtotal} وحدة (يتبع في الصفحة التالية...)
                               </span>
                             ) : q.isContinued ? (
-                              <span className="text-[9px] text-emerald-800 font-bold">
+                              <span className="text-[9px] text-emerald-800 font-bold leading-normal">
                                 اكتمل الصنف — إجمالي المطلوب: {q.totalRequested} وحدة
                               </span>
                             ) : (
-                              <span className="text-slate-600 font-bold">
+                              <span className="text-slate-600 font-bold leading-normal">
                                 عدد الطلبات: {q.customerRows.length}
                               </span>
                             )}
 
-                            <span className="font-black text-slate-950 font-mono text-[11px]">
+                            <span className="font-black text-slate-950 font-mono text-[11px] leading-normal">
                               إجمالي الصنف: {q.totalRequested}
                             </span>
                           </div>

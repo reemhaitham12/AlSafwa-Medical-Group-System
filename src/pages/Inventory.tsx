@@ -956,27 +956,27 @@ export const Inventory: React.FC = () => {
               <table className="w-full text-sm border-collapse border-2 border-slate-900 print:border-black">
                 <thead>
                   <tr className="bg-slate-100 text-slate-950 font-bold border-b-2 border-slate-900 print:bg-slate-200 print:border-black print:text-black">
-                    <th className="py-3 px-3 text-right border border-slate-900 print:border-black">#</th>
-                    <th className="py-3 px-3 text-right border border-slate-900 print:border-black">
+                    <th className="py-3 px-3 text-right border border-slate-900 print:border-black leading-normal align-middle">#</th>
+                    <th className="py-3 px-3 text-right border border-slate-900 print:border-black leading-normal align-middle">
                       {isArabic ? 'المنتج' : 'Product'}
                     </th>
-                    <th className="py-3 px-3 text-center border border-slate-900 print:border-black">
+                    <th className="py-3 px-3 text-center border border-slate-900 print:border-black leading-normal align-middle">
                       {isArabic ? 'المخزون الحالي' : 'Current Stock'}
                     </th>
-                    <th className="py-3 px-3 text-center border border-slate-900 print:border-black">
+                    <th className="py-3 px-3 text-center border border-slate-900 print:border-black leading-normal align-middle">
                       {isArabic ? 'الوارد' : 'Incoming'}
                     </th>
-                    <th className="py-3 px-3 text-center border border-slate-900 print:border-black">
+                    <th className="py-3 px-3 text-center border border-slate-900 print:border-black leading-normal align-middle">
                       {isArabic ? 'المتاح' : 'Available'}
                     </th>
-                    <th className="py-3 px-3 text-center border border-slate-900 print:border-black">
+                    <th className="py-3 px-3 text-center border border-slate-900 print:border-black leading-normal align-middle">
                       {isArabic ? 'مطلوب من الفواتير' : 'Required from Invoices'}
                     </th>
-                    <th className="py-3 px-3 text-center border border-slate-900 print:border-black">
+                    <th className="py-3 px-3 text-center border border-slate-900 print:border-black leading-normal align-middle">
                       {isArabic ? 'الفرق' : 'Difference'}
                     </th>
                     {/* Actions column — hidden in print */}
-                    <th className="py-3 px-3 text-center border border-slate-900 print:hidden print:border-black">
+                    <th className="py-3 px-3 text-center border border-slate-900 print:hidden print:border-black leading-normal align-middle">
                       {isArabic ? 'إجراءات' : 'Actions'}
                     </th>
                   </tr>
@@ -997,25 +997,25 @@ export const Inventory: React.FC = () => {
                       return (
                         <React.Fragment key={row.productName}>
                           <tr className="hover:bg-slate-50 transition-colors">
-                            <td className="py-3 px-3 text-center font-mono text-slate-600 border border-slate-200 print:border-black print:text-black">
+                            <td className="py-3 px-3 text-center font-mono text-slate-600 border border-slate-200 print:border-black print:text-black leading-relaxed align-middle">
                               {idx + 1}
                             </td>
-                            <td className="py-3 px-3 font-bold text-slate-900 border border-slate-200 print:border-black print:text-black">
+                            <td className="py-3 px-3 font-bold text-slate-900 border border-slate-200 print:border-black print:text-black leading-relaxed align-middle break-words">
                               {row.productName}
                             </td>
-                            <td className="py-3 px-3 text-center border border-slate-200 print:border-black print:text-black">
+                            <td className="py-3 px-3 text-center border border-slate-200 print:border-black print:text-black leading-relaxed align-middle">
                               {row.currentStock}
                             </td>
-                            <td className="py-3 px-3 text-center border border-slate-200 print:border-black print:text-black">
+                            <td className="py-3 px-3 text-center border border-slate-200 print:border-black print:text-black leading-relaxed align-middle">
                               {row.incoming}
                             </td>
-                            <td className="py-3 px-3 text-center font-bold text-brand-700 border border-slate-200 print:border-black print:text-black">
+                            <td className="py-3 px-3 text-center font-bold text-brand-700 border border-slate-200 print:border-black print:text-black leading-relaxed align-middle">
                               {row.available}
                             </td>
-                            <td className="py-3 px-3 text-center border border-slate-200 print:border-black print:text-black">
+                            <td className="py-3 px-3 text-center border border-slate-200 print:border-black print:text-black leading-relaxed align-middle">
                               {row.requiredFromInvoices}
                             </td>
-                            <td className={`py-3 px-3 text-center border border-slate-200 print:border-black print:text-black ${diffColor}`}>
+                            <td className={`py-3 px-3 text-center border border-slate-200 print:border-black print:text-black leading-relaxed align-middle ${diffColor}`}>
                               {diff > 0 ? `+${diff}` : diff}
                             </td>
                             {/* Actions — hidden on print */}

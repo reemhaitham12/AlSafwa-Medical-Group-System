@@ -300,29 +300,29 @@ export const StockOrder: React.FC = () => {
               <table className="w-full text-sm border-collapse border-2 border-slate-900 print:border-black">
                 <thead>
                   <tr className="bg-slate-100 text-slate-950 font-bold border-b-2 border-slate-900 print:bg-slate-200 print:border-black print:text-black">
-                    <th className="py-3 px-4 text-right border border-slate-900 print:border-black w-16">#</th>
-                    <th className="py-3 px-4 text-right border border-slate-900 print:border-black">الصنف</th>
-                    <th className="py-3 px-4 text-center border border-slate-900 print:border-black w-32">الكمية المطلوبة</th>
+                    <th className="py-3 px-4 text-right border border-slate-900 print:border-black w-16 leading-normal align-middle">#</th>
+                    <th className="py-3 px-4 text-right border border-slate-900 print:border-black leading-normal align-middle">الصنف</th>
+                    <th className="py-3 px-4 text-center border border-slate-900 print:border-black w-32 leading-normal align-middle">الكمية المطلوبة</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-300 print:divide-black">
                   {stockItems.length > 0 ? (
                     stockItems.map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-50">
-                        <td className="py-3 px-4 text-center font-mono text-slate-700 border border-slate-900 print:border-black print:text-black">
+                        <td className="py-3 px-4 text-center font-mono text-slate-700 border border-slate-900 print:border-black print:text-black leading-relaxed align-middle">
                           {idx + 1}
                         </td>
-                        <td className="py-3 px-4 font-bold text-slate-900 border border-slate-900 print:border-black print:text-black">
+                        <td className="py-3 px-4 font-bold text-slate-900 border border-slate-900 print:border-black print:text-black leading-relaxed align-middle break-words">
                           {item.product_name}
                         </td>
-                        <td className="py-3 px-4 text-center font-extrabold text-brand-700 print:text-black border border-slate-900 print:border-black text-base">
+                        <td className="py-3 px-4 text-center font-extrabold text-brand-700 print:text-black border border-slate-900 print:border-black text-base leading-relaxed align-middle">
                           {item.total_quantity}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={3} className="py-8 text-center text-slate-500 border border-slate-900 print:border-black print:text-black">
+                      <td colSpan={3} className="py-8 text-center text-slate-500 border border-slate-900 print:border-black print:text-black leading-relaxed">
                         {isArabic
                           ? 'لا توجد فواتير أو أصناف مسجلة في الفترة المحددة.'
                           : 'No invoices or stock items found in selected period.'}
@@ -333,10 +333,10 @@ export const StockOrder: React.FC = () => {
                 {stockItems.length > 0 && (
                   <tfoot>
                     <tr className="bg-slate-100 font-extrabold text-slate-950 border-t-2 border-slate-900 print:bg-slate-200 print:border-black print:text-black">
-                      <td colSpan={2} className="py-3.5 px-4 text-right border border-slate-900 print:border-black text-base">
+                      <td colSpan={2} className="py-3.5 px-4 text-right border border-slate-900 print:border-black text-base leading-normal align-middle">
                         إجمالي عدد الأصناف: {stockItems.length}
                       </td>
-                      <td className="py-3.5 px-4 text-center border border-slate-900 print:border-black text-lg text-emerald-700 print:text-black">
+                      <td className="py-3.5 px-4 text-center border border-slate-900 print:border-black text-lg text-emerald-700 print:text-black leading-normal align-middle">
                         {totalQuantitySum}
                       </td>
                     </tr>
