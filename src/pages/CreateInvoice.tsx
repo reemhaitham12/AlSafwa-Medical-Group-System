@@ -63,10 +63,12 @@ export const CreateInvoice: React.FC = () => {
   const [productsList, setProductsList] = useState<Product[]>([]);
   const [productSearch, setProductSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [customUnitPrice, setCustomUnitPrice] = useState<string>('');
   const [itemQty, setItemQty] = useState(1);
 
   // Refs for keyboard navigation
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const unitPriceInputRef = React.useRef<HTMLInputElement>(null);
   const quantityInputRef = React.useRef<HTMLInputElement>(null);
 
   // Invoice Items & Calculations State
@@ -202,8 +204,9 @@ export const CreateInvoice: React.FC = () => {
     if (!selectedProduct) return;
 
     const qty = Math.max(1, itemQty || 1);
-    const unitPrice = Number(selectedProduct.price) || 0;
-    const itemTotal = qty * unitPrice;
+    const parsedPrice = customUnitPrice.trim() !== '' ? Number(customUnitPrice) : Number(selectedProduct.price ?? 0);
+    const unitPrice = isNaN(parsedPrice) || parsedPrice < 0 ? 0 : Math.round(parsedPrice * 100) / 100;
+    const itemTotal = Math.round((qty * unitPrice) * 100) / 100;
 
     const newItem: InvoiceItemDraft = {
       product_id: selectedProduct.id,
@@ -216,6 +219,7 @@ export const CreateInvoice: React.FC = () => {
     setItems((prev) => [...prev, newItem]);
     setSelectedProduct(null);
     setProductSearch('');
+    setCustomUnitPrice('');
     setItemQty(1);
 
     setTimeout(() => {
@@ -257,6 +261,7 @@ export const CreateInvoice: React.FC = () => {
       // 3. If a product was unambiguously matched:
       if (matchedProduct) {
         setSelectedProduct(matchedProduct);
+        setCustomUnitPrice(matchedProduct.price != null ? String(Number(matchedProduct.price).toFixed(2)) : '0.00');
         setProductSearch(
           matchedProduct.item_number != null
             ? `${matchedProduct.item_number} — ${matchedProduct.name}`
@@ -269,6 +274,15 @@ export const CreateInvoice: React.FC = () => {
           quantityInputRef.current?.select();
         }, 50);
       }
+    }
+  };
+
+  const handlePriceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      quantityInputRef.current?.focus();
+      quantityInputRef.current?.select();
     }
   };
 
@@ -287,16 +301,34 @@ export const CreateInvoice: React.FC = () => {
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleUpdateUnitPrice = (index: number, newPriceVal: number | string) => {
+    const parsed = Number(newPriceVal);
+    const price = isNaN(parsed) || parsed < 0 ? 0 : Math.round(parsed * 100) / 100;
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i === index) {
+          const qty = item.quantity || 1;
+          return {
+            ...item,
+            unit_price: price,
+            total: Math.round((qty * price) * 100) / 100,
+          };
+        }
+        return item;
+      })
+    );
+  };
+
   const handleUpdateQty = (index: number, newQty: number) => {
     const qty = Math.max(1, newQty || 1);
     setItems((prev) =>
       prev.map((item, i) => {
         if (i === index) {
-          const unitPrice = Number(item.unit_price) || 0;
+          const unitPrice = Number(item.unit_price) >= 0 ? Number(item.unit_price) : 0;
           return {
             ...item,
             quantity: qty,
-            total: qty * unitPrice,
+            total: Math.round((qty * unitPrice) * 100) / 100,
           };
         }
         return item;
@@ -314,6 +346,7 @@ export const CreateInvoice: React.FC = () => {
     setPreviousDebt(0);
     setProductSearch('');
     setSelectedProduct(null);
+    setCustomUnitPrice('');
     setItemQty(1);
 
     try {
@@ -562,7 +595,7 @@ export const CreateInvoice: React.FC = () => {
             <Card title={isArabic ? 'إضافة منتجات من كتالوج الصفوة' : 'Add Products from Catalog'}>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="md:col-span-7 relative">
+                  <div className="md:col-span-5 relative">
                     <Input
                       ref={searchInputRef}
                       label={isArabic ? 'بحث وتحديد المنتج (برقم الصنف أو الاسم)' : 'Search Product (by Item # or Name)'}
@@ -572,6 +605,7 @@ export const CreateInvoice: React.FC = () => {
                       onChange={(e) => {
                         setProductSearch(e.target.value);
                         setSelectedProduct(null);
+                        setCustomUnitPrice('');
                       }}
                       onKeyDown={handleSearchKeyDown}
                     />
@@ -584,6 +618,7 @@ export const CreateInvoice: React.FC = () => {
                               key={p.id}
                               onClick={() => {
                                 setSelectedProduct(p);
+                                setCustomUnitPrice(p.price != null ? String(Number(p.price).toFixed(2)) : '0.00');
                                 setProductSearch(p.item_number != null ? `${p.item_number} — ${p.name}` : p.name);
                                 setItemQty(1);
                                 setTimeout(() => {
@@ -618,6 +653,23 @@ export const CreateInvoice: React.FC = () => {
 
                   <div className="md:col-span-3">
                     <Input
+                      ref={unitPriceInputRef}
+                      label={isArabic ? 'سعر الوحدة (ج.م) [اختياري]' : 'Unit Price (EGP)'}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={customUnitPrice}
+                      placeholder={selectedProduct ? String(selectedProduct.price) : '0.00'}
+                      disabled={!selectedProduct}
+                      enterKeyHint="next"
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => setCustomUnitPrice(e.target.value)}
+                      onKeyDown={handlePriceKeyDown}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Input
                       ref={quantityInputRef}
                       label={isArabic ? 'الكمية' : 'Quantity'}
                       type="number"
@@ -636,7 +688,7 @@ export const CreateInvoice: React.FC = () => {
                       variant="primary"
                       className="w-full py-2"
                       onClick={handleAddItem}
-                      disabled={!selectedProduct}
+                      disabled={!selectedProduct || customUnitPrice.trim() === '' || isNaN(Number(customUnitPrice)) || Number(customUnitPrice) < 0}
                       icon={<Plus className="w-4 h-4" />}
                     >
                       {isArabic ? 'إضافة' : 'Add'}
@@ -645,7 +697,7 @@ export const CreateInvoice: React.FC = () => {
                 </div>
 
                 {selectedProduct && (
-                  <div className="p-3 bg-brand-50 border border-brand-200 rounded-lg text-xs text-brand-900 flex justify-between items-center">
+                  <div className="p-3 bg-brand-50 border border-brand-200 rounded-lg text-xs text-brand-900 flex flex-wrap justify-between items-center gap-2">
                     <div className="flex items-center gap-2">
                       {selectedProduct.item_number != null && (
                         <span className="px-2 py-0.5 rounded bg-brand-600 text-white font-mono font-bold">
@@ -655,10 +707,13 @@ export const CreateInvoice: React.FC = () => {
                       <div>
                         <span>الصنف المحدد: </span>
                         <strong className="text-brand-950">{selectedProduct.name}</strong>
+                        <span className="text-[11px] text-surface-500 mr-2">
+                          (السعر الافتراضي بالقاعدة: {formatCurrency(selectedProduct.price, true)})
+                        </span>
                       </div>
                     </div>
-                    <div className="font-bold text-emerald-700">
-                      سعر الوحدة: {formatCurrency(selectedProduct.price, true)}
+                    <div className="font-bold text-brand-800">
+                      إجمالي البند المتوقع: {formatCurrency((itemQty || 1) * (Number(customUnitPrice) || 0), true)}
                     </div>
                   </div>
                 )}
@@ -674,7 +729,7 @@ export const CreateInvoice: React.FC = () => {
                       <th className="p-3">#</th>
                       <th className="p-3">الصنف</th>
                       <th className="p-3 text-center w-24">الكمية</th>
-                      <th className="p-3 text-right">سعر الوحدة</th>
+                      <th className="p-3 text-center w-32">سعر الوحدة (ج.م)</th>
                       <th className="p-3 text-right">السعر الإجمالي</th>
                       <th className="p-3 text-center w-16">إزالة</th>
                     </tr>
@@ -694,7 +749,18 @@ export const CreateInvoice: React.FC = () => {
                               className="w-16 px-2 py-1 border border-surface-200 rounded text-center font-bold"
                             />
                           </td>
-                          <td className="p-3 text-right text-surface-600">{formatCurrency(item.unit_price, true)}</td>
+                          <td className="p-3 text-center">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.unit_price}
+                              onChange={(e) => handleUpdateUnitPrice(idx, e.target.value)}
+                              onFocus={(e) => e.target.select()}
+                              className="w-24 px-2 py-1 border border-surface-200 rounded text-center font-bold text-surface-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
+                              dir="ltr"
+                            />
+                          </td>
                           <td className="p-3 text-right font-bold text-surface-900">{formatCurrency(item.total, true)}</td>
                           <td className="p-3 text-center">
                             <button

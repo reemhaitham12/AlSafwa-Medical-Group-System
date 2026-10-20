@@ -48,6 +48,7 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
   const [productSearch, setProductSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [addQty, setAddQty] = useState(1);
+  const [customUnitPrice, setCustomUnitPrice] = useState<string>('');
 
   useEffect(() => {
     if (invoice) {
@@ -76,6 +77,7 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
       setIsBonus(false);
       setItems([]);
     }
+    setCustomUnitPrice('');
   }, [invoice]);
 
   useEffect(() => {
@@ -107,11 +109,29 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
     setItems((prev) =>
       prev.map((item, i) => {
         if (i === index) {
-          const unitPrice = Number(item.unit_price) || 0;
+          const unitPrice = Number(item.unit_price) >= 0 ? Number(item.unit_price) : 0;
           return {
             ...item,
             quantity: qty,
-            total: qty * unitPrice,
+            total: Math.round((qty * unitPrice) * 100) / 100,
+          };
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleUpdateItemUnitPrice = (index: number, newPriceVal: number | string) => {
+    const parsed = Number(newPriceVal);
+    const price = isNaN(parsed) || parsed < 0 ? 0 : Math.round(parsed * 100) / 100;
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i === index) {
+          const qty = item.quantity || 1;
+          return {
+            ...item,
+            unit_price: price,
+            total: Math.round((qty * price) * 100) / 100,
           };
         }
         return item;
@@ -126,18 +146,20 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
   const handleAddProduct = () => {
     if (!selectedProduct) return;
     const qty = Math.max(1, addQty || 1);
-    const unitPrice = Number(selectedProduct.price) || 0;
+    const parsedPrice = customUnitPrice.trim() !== '' ? Number(customUnitPrice) : Number(selectedProduct.price ?? 0);
+    const unitPrice = isNaN(parsedPrice) || parsedPrice < 0 ? 0 : Math.round(parsedPrice * 100) / 100;
     const newItem: EditableItem = {
       product_id: selectedProduct.id,
       product_name_snapshot: selectedProduct.name || '',
       quantity: qty,
       unit_price: unitPrice,
-      total: qty * unitPrice,
+      total: Math.round((qty * unitPrice) * 100) / 100,
     };
 
     setItems((prev) => [...prev, newItem]);
     setSelectedProduct(null);
     setProductSearch('');
+    setCustomUnitPrice('');
     setAddQty(1);
   };
 
@@ -296,7 +318,7 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
           <div className="bg-surface-50 p-4 rounded-xl border border-surface-200 space-y-3">
             <h4 className="text-xs font-bold text-surface-900">{isArabic ? 'إضافة منتج إضافي للفاتورة' : 'Add Additional Product'}</h4>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-              <div className="md:col-span-7 relative">
+              <div className="md:col-span-5 relative">
                 <Input
                   placeholder={isArabic ? 'بحث باسم المنتج أو الكود...' : 'Search product name or code...'}
                   value={productSearch}
@@ -315,6 +337,7 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
                         key={p.id}
                         onClick={() => {
                           setSelectedProduct(p);
+                          setCustomUnitPrice(p.price != null ? String(Number(p.price).toFixed(2)) : '0.00');
                           setProductSearch(p.name);
                         }}
                         className="w-full text-right px-3 py-2 text-xs hover:bg-brand-50 flex justify-between items-center border-b border-surface-100 last:border-none"
@@ -328,6 +351,20 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
               </div>
 
               <div className="md:col-span-3">
+                <Input
+                  label={isArabic ? 'سعر الوحدة (ج.م) [اختياري]' : 'Unit Price (EGP)'}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={customUnitPrice}
+                  placeholder={selectedProduct ? String(selectedProduct.price) : '0.00'}
+                  disabled={!selectedProduct || isSubmitting}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => setCustomUnitPrice(e.target.value)}
+                />
+              </div>
+
+              <div className="md:col-span-2">
                 <Input
                   label={isArabic ? 'الكمية' : 'Qty'}
                   type="number"
@@ -345,7 +382,7 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
                   size="md"
                   className="w-full"
                   onClick={handleAddProduct}
-                  disabled={!selectedProduct || isSubmitting}
+                  disabled={!selectedProduct || isSubmitting || customUnitPrice.trim() === '' || isNaN(Number(customUnitPrice)) || Number(customUnitPrice) < 0}
                   icon={<Plus className="w-4 h-4" />}
                 >
                   {isArabic ? 'إضافة' : 'Add'}
@@ -362,7 +399,7 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
                   <th className="p-3">#</th>
                   <th className="p-3">الصنف</th>
                   <th className="p-3 text-center w-24">الكمية</th>
-                  <th className="p-3 text-right">سعر الوحدة</th>
+                  <th className="p-3 text-center w-32">سعر الوحدة (ج.م)</th>
                   <th className="p-3 text-right">الإجمالي</th>
                   <th className="p-3 text-center w-16">إجراء</th>
                 </tr>
@@ -382,7 +419,19 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
                         className="w-16 px-2 py-1 border border-surface-200 rounded text-center font-bold disabled:bg-surface-100"
                       />
                     </td>
-                    <td className="p-3 text-right">{formatCurrency(item.unit_price, true)}</td>
+                    <td className="p-3 text-center">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.unit_price}
+                        onChange={(e) => handleUpdateItemUnitPrice(idx, e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        disabled={isSubmitting}
+                        className="w-24 px-2 py-1 border border-surface-200 rounded text-center font-bold text-surface-900 disabled:bg-surface-100 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                        dir="ltr"
+                      />
+                    </td>
                     <td className="p-3 text-right font-bold text-surface-900">{formatCurrency(item.total, true)}</td>
                     <td className="p-3 text-center">
                       <button
