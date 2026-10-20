@@ -9,6 +9,54 @@ interface PrintableInvoiceProps {
   className?: string;
 }
 
+/**
+ * Renders the customer account summary block (previous debt + invoice total + total due).
+ * Shown in both print/screen variants, below the existing totals box.
+ */
+const AccountSummaryBlock: React.FC<{ invoice: Invoice }> = ({ invoice }) => {
+  const previousDebt = Number(invoice.previous_debt_snapshot) || 0;
+  const finalTotal = Number(invoice.final_total) || 0;
+  const totalDue = previousDebt + finalTotal;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-dashed border-slate-400 print:border-black print:mt-2.5 print:pt-2.5">
+      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2 print:text-black print:text-[9px]">
+        ملخص حساب العميل
+      </p>
+
+      {/* المديونية السابقة */}
+      <div className="flex justify-between items-center py-1 px-0.5 border-b border-slate-200 print:border-black text-sm leading-normal">
+        <span className="font-semibold text-slate-700 print:text-black text-xs print:text-[10px]">
+          المديونية السابقة:
+        </span>
+        <span className={`font-bold whitespace-nowrap text-xs print:text-[10px] ${previousDebt > 0 ? 'text-amber-800 print:text-black' : 'text-slate-600 print:text-black'}`}>
+          {formatCurrency(previousDebt, true)}
+        </span>
+      </div>
+
+      {/* سعر الفاتورة */}
+      <div className="flex justify-between items-center py-1 px-0.5 border-b border-slate-200 print:border-black leading-normal">
+        <span className="font-semibold text-slate-700 print:text-black text-xs print:text-[10px]">
+          سعر الفاتورة:
+        </span>
+        <span className="font-bold text-slate-900 print:text-black whitespace-nowrap text-xs print:text-[10px]">
+          {formatCurrency(finalTotal, true)}
+        </span>
+      </div>
+
+      {/* المجموع المستحق */}
+      <div className="flex justify-between items-center py-2 px-3 bg-slate-900 text-white rounded-lg mt-2 print:bg-white print:border print:border-black print:rounded-sm leading-normal">
+        <span className="font-extrabold text-xs print:text-[10px] print:text-black">
+          المجموع المستحق:
+        </span>
+        <span className="font-extrabold text-sm print:text-[11px] print:text-black whitespace-nowrap">
+          {formatCurrency(totalDue, true)}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ invoice, className = '' }) => {
   if (!invoice) return null;
 
@@ -140,6 +188,9 @@ export const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ invoice, cla
                   ⭐ BONUS / بونص
                 </div>
               )}
+
+              {/* Customer Account Summary */}
+              <AccountSummaryBlock invoice={invoice} />
             </div>
           </div>
 
@@ -207,6 +258,9 @@ export const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ invoice, cla
                     ⭐ BONUS / بونص
                   </div>
                 )}
+
+                {/* Customer Account Summary */}
+                <AccountSummaryBlock invoice={invoice} />
               </div>
             </div>
           </div>

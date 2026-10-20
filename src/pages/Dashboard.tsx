@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -7,18 +8,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { invoicesService } from '@/services/invoicesService';
 import { productsService } from '@/services/productsService';
 import { customersService } from '@/services/customersService';
-import type { Invoice } from '@/lib/database.types';
+import type { Invoice, Customer } from '@/lib/database.types';
 import { formatCurrency } from '@/utils/formatters';
 import {
+  DollarSign,
   FileText,
-  Users,
   Package,
+  Users,
   PlusCircle,
-  Database,
-  TrendingUp,
-  DollarSign
+  FileSpreadsheet,
+  AlertCircle,
+  CreditCard,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 interface CustomerSalesSummary {
   name: string;
@@ -31,9 +32,10 @@ export const Dashboard: React.FC = () => {
   const { user, profile, isConfigured, isViewer } = useAuth();
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [productCount, setProductCount] = useState<number>(0);
-  const [customerCount, setCustomerCount] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [productCount, setProductCount] = useState(0);
+  const [customerCount, setCustomerCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (isConfigured && user) {
@@ -47,6 +49,7 @@ export const Dashboard: React.FC = () => {
           setInvoices(invs);
           setProductCount(prods.length);
           setCustomerCount(custs.length);
+          setCustomers(custs);
         })
         .catch((err) => console.error('Error fetching dashboard stats:', err))
         .finally(() => setLoading(false));
@@ -57,6 +60,7 @@ export const Dashboard: React.FC = () => {
   const normalInvoices = invoices.filter((inv) => !inv.is_bonus);
   const bonusInvoices = invoices.filter((inv) => Boolean(inv.is_bonus));
   const totalSales = normalInvoices.reduce((sum, inv) => sum + Number(inv.final_total || 0), 0);
+  const totalOutstandingDebt = customers.reduce((sum, c) => sum + (Number(c.previous_debt) || 0), 0);
 
   // Group sales by customer snapshot name (excluding bonus invoice amounts from revenue)
   const customerSalesMap: Record<string, CustomerSalesSummary> = {};
@@ -66,7 +70,6 @@ export const Dashboard: React.FC = () => {
       customerSalesMap[name] = { name, invoiceCount: 0, totalSales: 0 };
     }
     customerSalesMap[name].invoiceCount += 1;
-    // Only non-bonus amounts contribute to sales revenue
     if (!inv.is_bonus) {
       customerSalesMap[name].totalSales += Number(inv.final_total || 0);
     }
@@ -93,8 +96,8 @@ export const Dashboard: React.FC = () => {
           </div>
           <p className="text-xs text-surface-500">
             {isArabic
-              ? 'مجموعة الصفوة ميديكال - لوحة متابعة الفواتير والمبيعات السحابية الحقيقية'
-              : 'AlSafwa Medical Group - Live Cloud Database Analytics'}
+              ? 'مجموعة الصفوة ميديكال - لوحة متابعة الفواتير والمبيعات ومطابقة حسابات العملاء'
+              : 'AlSafwa Medical Group - Live Cloud Database Analytics & Customer Ledgers'}
           </p>
         </div>
 
@@ -116,7 +119,7 @@ export const Dashboard: React.FC = () => {
       ) : (
         <>
           {/* Quick Overview Cards */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 ${isViewer ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-4`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Sales (Hidden for viewer) */}
             {!isViewer && (
               <Card className="hover:border-emerald-300 bg-emerald-50/30">
@@ -142,6 +145,26 @@ export const Dashboard: React.FC = () => {
               </Card>
             )}
 
+            {/* Total Outstanding Debt */}
+            {!isViewer && (
+              <Card className="hover:border-amber-300 bg-amber-50/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-amber-800">{isArabic ? 'إجمالي المديونيات المستحقة' : 'Total Outstanding Debt'}</p>
+                    <h3 className="text-xl font-extrabold text-amber-900 mt-1">
+                      {formatCurrency(totalOutstandingDebt, isArabic)}
+                    </h3>
+                    <p className="text-[11px] text-amber-700 mt-0.5">
+                      {isArabic ? 'أرصدة حسابات العملاء الحالية' : 'Active Customer Balances'}
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {/* Total Invoices */}
             <Card className="hover:border-brand-300">
               <div className="flex items-center justify-between">
@@ -160,27 +183,13 @@ export const Dashboard: React.FC = () => {
               </div>
             </Card>
 
-            {/* Products Catalog */}
-            <Card className="hover:border-brand-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-surface-500">{isArabic ? 'كتالوج المنتجات' : 'Products Catalog'}</p>
-                  <h3 className="text-2xl font-bold text-surface-900 mt-1">{productCount}</h3>
-                  <p className="text-[11px] text-surface-400 mt-0.5">{isArabic ? 'أصناف الصفوة المعتمدة' : 'GPL Approved Products'}</p>
-                </div>
-                <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
-                  <Package className="w-5 h-5" />
-                </div>
-              </div>
-            </Card>
-
             {/* Active Customers */}
             <Card className="hover:border-brand-300">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-surface-500">{isArabic ? 'العملاء المسجلين' : 'Active Customers'}</p>
                   <h3 className="text-2xl font-bold text-surface-900 mt-1">{customerCount}</h3>
-                  <p className="text-[11px] text-surface-400 mt-0.5">{isArabic ? 'سجل المستشفيات' : 'Registered Clients'}</p>
+                  <p className="text-[11px] text-surface-400 mt-0.5">{isArabic ? 'سجل المستشفيات والجهات' : 'Registered Clients'}</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
                   <Users className="w-5 h-5" />
@@ -198,31 +207,26 @@ export const Dashboard: React.FC = () => {
                     <tr>
                       <th className="px-4 py-3">{isArabic ? 'اسم العميل / الجهة' : 'Customer Name'}</th>
                       <th className="px-4 py-3 text-center">{isArabic ? 'عدد الفواتير الصادرة' : 'Invoices Count'}</th>
-                      {!isViewer && (
-                        <th className="px-4 py-3 text-left">{isArabic ? 'إجمالي المبيعات' : 'Total Sales'}</th>
-                      )}
+                      <th className="px-4 py-3 text-left">{isArabic ? 'إجمالي المشتريات (EGP)' : 'Total Invoiced (EGP)'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-100">
-                    {customerSalesList.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-surface-50">
-                        <td className="px-4 py-3 font-semibold text-surface-900">{item.name}</td>
-                        <td className="px-4 py-3 text-center">
-                          <Badge variant="brand">{item.invoiceCount}</Badge>
+                    {customerSalesList.map((cs, idx) => (
+                      <tr key={idx} className="hover:bg-surface-50/80 transition-colors">
+                        <td className="px-4 py-3 font-semibold text-surface-900">{cs.name}</td>
+                        <td className="px-4 py-3 text-center font-mono font-bold text-surface-700">{cs.invoiceCount}</td>
+                        <td className="px-4 py-3 text-left font-bold text-emerald-700">
+                          {formatCurrency(cs.totalSales, isArabic)}
                         </td>
-                        {!isViewer && (
-                          <td className="px-4 py-3 text-left font-extrabold text-emerald-700">
-                            {formatCurrency(item.totalSales, isArabic)}
-                          </td>
-                        )}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <div className="py-8 text-center text-surface-400 text-xs">
-                {isArabic ? 'لا توجد مبيعات أو فواتير صادرة حالياً' : 'No sales recorded yet'}
+              <div className="py-8 text-center text-surface-400">
+                <FileSpreadsheet className="w-8 h-8 mx-auto text-surface-300 mb-2" />
+                <p>{isArabic ? 'لا توجد فواتير مسجلة لعرض الإحصائيات' : 'No invoices to display'}</p>
               </div>
             )}
           </Card>

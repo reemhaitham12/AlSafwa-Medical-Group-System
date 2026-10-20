@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
-import type { Invoice, InvoiceItem } from '@/lib/database.types';
+import type { Invoice, InvoiceDebtStatus } from '@/lib/database.types';
+import { customersService } from '@/services/customersService';
 
 export interface CreateInvoicePayload {
   customer_id?: string | null;
@@ -8,6 +9,9 @@ export interface CreateInvoicePayload {
   discount_percentage: number;
   discount_amount: number;
   final_total: number;
+  /** Snapshot of the customer's previous_debt at creation time. Defaults to 0. */
+  previous_debt_snapshot?: number;
+  debt_status?: InvoiceDebtStatus;
   notes?: string | null;
   is_bonus?: boolean;
   created_by?: string | null;
@@ -27,6 +31,9 @@ export interface UpdateInvoicePayload {
   discount_percentage: number;
   discount_amount: number;
   final_total: number;
+  /** Snapshot of the customer's previous_debt at edit time. Defaults to 0. */
+  previous_debt_snapshot?: number;
+  debt_status?: InvoiceDebtStatus;
   notes?: string | null;
   is_bonus?: boolean;
   items: {
@@ -108,13 +115,28 @@ export const invoicesService = {
     // 1. Get current authenticated user id
     const { data: { user } } = await supabase.auth.getUser();
 
-    // 2. Insert invoice header
+    // 2. Determine previous_debt_snapshot:
+    // If customer_id is provided, retrieve the latest live outstanding debt from the database
+    let previousDebtSnapshot = Number(invoiceData.previous_debt_snapshot) || 0;
+    if (invoiceData.customer_id) {
+      try {
+        const cust = await customersService.getById(invoiceData.customer_id);
+        if (cust) {
+          previousDebtSnapshot = Math.round((Number(cust.previous_debt) || 0) * 100) / 100;
+        }
+      } catch (cErr) {
+        console.error('Error fetching latest customer debt for snapshot:', cErr);
+      }
+    }
+
+    // 3. Insert invoice header
     const { data: newInvoice, error: invoiceError } = await supabase
       .from('invoices')
       .insert({
         ...invoiceData,
         notes: invoiceData.notes?.trim() || null,
         is_bonus: Boolean(invoiceData.is_bonus),
+        previous_debt_snapshot: previousDebtSnapshot,
         created_by: user?.id || invoiceData.created_by || null,
       })
       .select()
@@ -122,7 +144,7 @@ export const invoicesService = {
 
     if (invoiceError) throw invoiceError;
 
-    // 3. Insert snapshot items into invoice_items
+    // 4. Insert snapshot items into invoice_items
     if (items && items.length > 0) {
       const itemsToInsert = items.map((item) => ({
         invoice_id: newInvoice.id,
@@ -140,14 +162,60 @@ export const invoicesService = {
       if (itemsError) throw itemsError;
     }
 
+    // 5. Automatically add order final amount (after discount) to customer's outstanding debt
+    let debtStatus: InvoiceDebtStatus = 'unreconciled';
+    if (invoiceData.customer_id && !invoiceData.is_bonus) {
+      const finalTotal = Math.round((Number(invoiceData.final_total) || 0) * 100) / 100;
+      if (finalTotal > 0) {
+        try {
+          await customersService.adjustDebt(invoiceData.customer_id, finalTotal);
+          debtStatus = 'applied';
+        } catch (debtErr) {
+          console.error('Failed to automatically increment customer debt:', debtErr);
+          debtStatus = 'failed';
+        }
+      } else {
+        debtStatus = 'applied';
+      }
+    } else if (invoiceData.is_bonus || !invoiceData.customer_id) {
+      // Bonus or walk-in cash without a customer: debt effect is 0, successfully accounted for
+      debtStatus = 'applied';
+    }
+
+    // Persist debt_status safely to database
+    try {
+      await supabase
+        .from('invoices')
+        .update({ debt_status: debtStatus })
+        .eq('id', newInvoice.id);
+    } catch (statusPersistErr) {
+      console.warn('Could not persist debt_status (migration may be pending):', statusPersistErr);
+    }
+
     return (await this.getById(newInvoice.id)) as Invoice;
   },
 
   async update(id: string, payload: UpdateInvoicePayload): Promise<Invoice> {
     const { items, ...invoiceData } = payload;
 
+    // Fetch the existing invoice first to calculate the delta
+    const oldInvoice = await this.getById(id);
+    if (!oldInvoice) {
+      throw new Error('لم يتم العثور على الفاتورة المراد تعديلها');
+    }
+
+    const oldCustomerId = oldInvoice.customer_id;
+    const oldDebtContribution = oldInvoice.is_bonus
+      ? 0
+      : Math.round((Number(oldInvoice.final_total) || 0) * 100) / 100;
+
+    const newCustomerId = invoiceData.customer_id ?? null;
+    const newDebtContribution = invoiceData.is_bonus
+      ? 0
+      : Math.round((Number(invoiceData.final_total) || 0) * 100) / 100;
+
     const updateHeaderPayload: Record<string, any> = {
-      customer_id: invoiceData.customer_id ?? null,
+      customer_id: newCustomerId,
       customer_name_snapshot: invoiceData.customer_name_snapshot,
       subtotal: Number(invoiceData.subtotal) || 0,
       discount_percentage: Number(invoiceData.discount_percentage) || 0,
@@ -156,6 +224,20 @@ export const invoicesService = {
       updated_at: new Date().toISOString(),
     };
 
+    // If customer changed, refresh previous_debt_snapshot for new customer
+    if (oldCustomerId !== newCustomerId && newCustomerId) {
+      try {
+        const newCust = await customersService.getById(newCustomerId);
+        updateHeaderPayload.previous_debt_snapshot = newCust
+          ? Math.round((Number(newCust.previous_debt) || 0) * 100) / 100
+          : 0;
+      } catch {
+        updateHeaderPayload.previous_debt_snapshot = Number(invoiceData.previous_debt_snapshot) || 0;
+      }
+    } else if (invoiceData.previous_debt_snapshot !== undefined) {
+      updateHeaderPayload.previous_debt_snapshot = Number(invoiceData.previous_debt_snapshot) || 0;
+    }
+
     if (invoiceData.notes !== undefined) {
       updateHeaderPayload.notes = invoiceData.notes?.trim() || null;
     }
@@ -163,18 +245,14 @@ export const invoicesService = {
       updateHeaderPayload.is_bonus = Boolean(invoiceData.is_bonus);
     }
 
-    // 1. Update invoice header with explicit verification
+    // 1. Update invoice header
     const { data: updatedHeaderData, error: headerError } = await supabase
       .from('invoices')
       .update(updateHeaderPayload)
       .eq('id', id)
       .select();
 
-    if (headerError) {
-      console.error('Supabase header update error:', headerError);
-      throw headerError;
-    }
-
+    if (headerError) throw headerError;
     if (!updatedHeaderData || updatedHeaderData.length === 0) {
       throw new Error('فشل تحديث الفاتورة: لم يتم العثور على الفاتورة في قاعدة البيانات');
     }
@@ -185,10 +263,7 @@ export const invoicesService = {
       .delete()
       .eq('invoice_id', id);
 
-    if (deleteItemsError) {
-      console.error('Supabase delete items error:', deleteItemsError);
-      throw new Error(`فشل تحديث أصناف الفاتورة: ${deleteItemsError.message}`);
-    }
+    if (deleteItemsError) throw deleteItemsError;
 
     // 3. Insert updated snapshot items
     if (items && items.length > 0) {
@@ -205,27 +280,115 @@ export const invoicesService = {
         .from('invoice_items')
         .insert(itemsToInsert);
 
-      if (insertItemsError) {
-        console.error('Supabase insert items error:', insertItemsError);
-        throw new Error(`فشل حفظ أصناف الفاتورة: ${insertItemsError.message}`);
+      if (insertItemsError) throw insertItemsError;
+    }
+
+    // 4. Update customer debt: recalculate affected balances safely and prevent duplicate debt additions
+    let debtStatus: InvoiceDebtStatus = oldInvoice.debt_status || 'unreconciled';
+    const wasApplied = oldInvoice.debt_status === 'applied';
+
+    try {
+      if (oldCustomerId === newCustomerId) {
+        if (newCustomerId) {
+          // If previously applied, apply delta only. If NOT previously applied, apply full new contribution!
+          const delta = wasApplied
+            ? Math.round((newDebtContribution - oldDebtContribution) * 100) / 100
+            : newDebtContribution;
+
+          if (delta !== 0) {
+            await customersService.adjustDebt(newCustomerId, delta);
+          }
+          debtStatus = 'applied';
+        } else {
+          debtStatus = 'applied';
+        }
+      } else {
+        // Customer changed: remove old contribution from old customer if it was applied, add new contribution to new customer
+        if (oldCustomerId && wasApplied && oldDebtContribution > 0) {
+          await customersService.adjustDebt(oldCustomerId, -oldDebtContribution);
+        }
+        if (newCustomerId && newDebtContribution > 0) {
+          await customersService.adjustDebt(newCustomerId, newDebtContribution);
+        }
+        debtStatus = 'applied';
       }
+    } catch (adjErr) {
+      console.error('Failed to adjust customer debt on invoice edit:', adjErr);
+      debtStatus = 'failed';
+    }
+
+    // Persist updated debt_status
+    try {
+      await supabase
+        .from('invoices')
+        .update({ debt_status: debtStatus })
+        .eq('id', id);
+    } catch (statusPersistErr) {
+      console.warn('Failed to persist debt_status on invoice edit:', statusPersistErr);
     }
 
     const updatedInvoice = await this.getById(id);
-    if (!updatedInvoice) {
-      throw new Error('فشل تحميل بيانات الفاتورة المحدثة');
-    }
-
+    if (!updatedInvoice) throw new Error('فشل تحميل بيانات الفاتورة المحدثة');
     return updatedInvoice;
   },
 
   async delete(id: string): Promise<void> {
+    // If invoice has a customer and was not bonus, subtract its total from customer debt only if it was actually applied!
+    try {
+      const invoice = await this.getById(id);
+      if (invoice && invoice.customer_id && !invoice.is_bonus && invoice.debt_status === 'applied') {
+        const contribution = Math.round((Number(invoice.final_total) || 0) * 100) / 100;
+        if (contribution > 0) {
+          await customersService.adjustDebt(invoice.customer_id, -contribution);
+        }
+      }
+    } catch (delDebtErr) {
+      console.error('Failed to deduct customer debt on invoice deletion:', delDebtErr);
+    }
+
     const { error } = await supabase
       .from('invoices')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
+  },
+
+  /**
+   * Manually reconciles or retries applying a single invoice's debt effect to customer debt.
+   */
+  async reconcileInvoiceDebt(invoiceId: string): Promise<Invoice> {
+    const invoice = await this.getById(invoiceId);
+    if (!invoice) throw new Error('لم يتم العثور على الفاتورة');
+
+    if (!invoice.customer_id) {
+      try {
+        await supabase.from('invoices').update({ debt_status: 'applied' }).eq('id', invoiceId);
+      } catch {}
+      return (await this.getById(invoiceId)) as Invoice;
+    }
+
+    if (invoice.is_bonus) {
+      try {
+        await supabase.from('invoices').update({ debt_status: 'applied' }).eq('id', invoiceId);
+      } catch {}
+      return (await this.getById(invoiceId)) as Invoice;
+    }
+
+    const contribution = Math.round((Number(invoice.final_total) || 0) * 100) / 100;
+    try {
+      if (contribution > 0) {
+        await customersService.adjustDebt(invoice.customer_id, contribution);
+      }
+      await supabase.from('invoices').update({ debt_status: 'applied' }).eq('id', invoiceId);
+    } catch (err: any) {
+      try {
+        await supabase.from('invoices').update({ debt_status: 'failed' }).eq('id', invoiceId);
+      } catch {}
+      throw err;
+    }
+
+    return (await this.getById(invoiceId)) as Invoice;
   },
 
   async deleteAll(): Promise<void> {

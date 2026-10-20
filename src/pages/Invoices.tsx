@@ -7,6 +7,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { InvoicePreviewModal } from '@/components/invoices/InvoicePreviewModal';
 import { PrintableInvoice } from '@/components/invoices/PrintableInvoice';
+import { DebtStatusIndicator } from '@/components/invoices/DebtStatusIndicator';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/context/ToastContext';
@@ -48,6 +49,30 @@ export const Invoices: React.FC = () => {
   const [deleteTargetInvoice, setDeleteTargetInvoice] = useState<Invoice | null>(null);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [reconcilingId, setReconcilingId] = useState<string | null>(null);
+
+  const handleReconcileSingleInvoice = async (inv: Invoice) => {
+    if (isViewer) return;
+    try {
+      setReconcilingId(inv.id);
+      await invoicesService.reconcileInvoiceDebt(inv.id);
+      showSuccess(
+        isArabic
+          ? `تم تحديث وتطبيق مديونية الفاتورة ${inv.invoice_number} بنجاح`
+          : `Debt for invoice ${inv.invoice_number} updated successfully`
+      );
+      await fetchInvoices();
+    } catch (err: any) {
+      console.error('Reconcile invoice debt error:', err);
+      showError(
+        err.message ||
+          (isArabic ? 'فشل تحديث مديونية الفاتورة' : 'Failed to update invoice debt')
+      );
+      await fetchInvoices();
+    } finally {
+      setReconcilingId(null);
+    }
+  };
 
   const handlePrintInvoice = (inv: Invoice) => {
     setPrintInvoice(inv);

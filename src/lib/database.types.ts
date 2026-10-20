@@ -34,9 +34,24 @@ export interface Customer {
   phone: string | null;
   email: string | null;
   address: string | null;
+  /** Customer's current outstanding debt / opening debt balance. Stored as NUMERIC(12,2) in Supabase. */
+  previous_debt: number;
   created_at: string;
   updated_at: string;
 }
+
+export interface CustomerPayment {
+  id: string;
+  customer_id: string;
+  amount: number;
+  previous_debt: number;
+  remaining_debt: number;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export type InvoiceDebtStatus = 'applied' | 'unreconciled' | 'failed';
 
 export interface Invoice {
   id: string;
@@ -47,6 +62,10 @@ export interface Invoice {
   discount_percentage: number;
   discount_amount: number;
   final_total: number;
+  /** Snapshot of customer running debt immediately before this invoice was added. */
+  previous_debt_snapshot: number;
+  /** Status of debt effect on customer balance: 'applied' (green), 'unreconciled' (gray), 'failed' (red). */
+  debt_status?: InvoiceDebtStatus;
   notes?: string | null;
   is_bonus?: boolean;
   created_by: string | null;
@@ -104,12 +123,17 @@ export interface Database {
       };
       customers: {
         Row: Customer;
-        Insert: Omit<Customer, 'id' | 'created_at' | 'updated_at'> & { id?: string; created_at?: string; updated_at?: string };
+        Insert: Omit<Customer, 'id' | 'created_at' | 'updated_at'> & { id?: string; previous_debt?: number; created_at?: string; updated_at?: string };
         Update: Partial<Omit<Customer, 'id'>>;
+      };
+      customer_payments: {
+        Row: CustomerPayment;
+        Insert: Omit<CustomerPayment, 'id' | 'created_at'> & { id?: string; created_at?: string };
+        Update: Partial<Omit<CustomerPayment, 'id'>>;
       };
       invoices: {
         Row: Invoice;
-        Insert: Omit<Invoice, 'id' | 'created_at' | 'updated_at'> & { id?: string; created_at?: string; updated_at?: string };
+        Insert: Omit<Invoice, 'id' | 'created_at' | 'updated_at'> & { id?: string; previous_debt_snapshot?: number; debt_status?: InvoiceDebtStatus; created_at?: string; updated_at?: string };
         Update: Partial<Omit<Invoice, 'id'>>;
       };
       invoice_items: {

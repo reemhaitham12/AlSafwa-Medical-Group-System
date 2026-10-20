@@ -228,6 +228,7 @@ export const InvoiceEditModal: React.FC<InvoiceEditModalProps> = ({
               type="number"
               min="0"
               max="100"
+              step="0.01"
               value={discountPercentage}
               onChange={(e) => setDiscountPercentage(Number(e.target.value))}
               disabled={isSubmitting}

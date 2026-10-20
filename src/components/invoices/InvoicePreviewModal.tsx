@@ -3,6 +3,7 @@ import type { Invoice } from '@/lib/database.types';
 import { useLanguage } from '@/hooks/useLanguage';
 import { Button } from '@/components/common/Button';
 import { PrintableInvoice } from '@/components/invoices/PrintableInvoice';
+import { DebtStatusIndicator } from '@/components/invoices/DebtStatusIndicator';
 import { downloadInvoicePDF } from '@/utils/pdfGenerator';
 import { Printer, Download, X } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
@@ -77,6 +78,7 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
             <span className="font-mono font-bold text-sm bg-brand-50 text-brand-700 px-3 py-1 rounded-lg border border-brand-200">
               {invoice.invoice_number}
             </span>
+            <DebtStatusIndicator status={invoice.debt_status} showLabel={true} />
             {invoice.is_bonus && (
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
                 ⭐ {isArabic ? 'بونص' : 'BONUS'}

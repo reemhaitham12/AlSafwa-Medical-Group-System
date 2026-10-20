@@ -25,6 +25,36 @@ interface PaginatedPageData {
 }
 
 /**
+ * Builds the HTML string for the Customer Account Summary block
+ * that is appended below the existing totals box in the PDF footer.
+ */
+function buildAccountSummaryHtml(invoice: Invoice): string {
+  const previousDebt = Number(invoice.previous_debt_snapshot) || 0;
+  const finalTotal = Number(invoice.final_total) || 0;
+  const totalDue = previousDebt + finalTotal;
+
+  return `
+    <div style="margin-top: 8px; padding-top: 7px; border-top: 1px dashed #64748b; width: 100%; box-sizing: border-box;">
+      <div style="font-size: 8.5px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 5px; line-height: 1.4;">
+        ملخص حساب العميل
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 2.5px 0; border-bottom: 1px solid #e2e8f0; line-height: 1.4;">
+        <span style="color: #475569; font-size: 10px;">المديونية السابقة:</span>
+        <span style="font-weight: bold; color: ${previousDebt > 0 ? '#92400e' : '#64748b'}; white-space: nowrap; font-size: 10px;">${formatCurrency(previousDebt, true)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 2.5px 0; border-bottom: 1px solid #e2e8f0; line-height: 1.4;">
+        <span style="color: #475569; font-size: 10px;">سعر الفاتورة:</span>
+        <span style="font-weight: bold; color: #0f172a; white-space: nowrap; font-size: 10px;">${formatCurrency(finalTotal, true)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 7px; background: #0f172a; border-radius: 4px; margin-top: 4px; line-height: 1.4;">
+        <span style="font-weight: 900; color: #ffffff; font-size: 10px;">المجموع المستحق:</span>
+        <span style="font-weight: 900; color: #ffffff; white-space: nowrap; font-size: 11px;">${formatCurrency(totalDue, true)}</span>
+      </div>
+    </div>
+  `;
+}
+
+/**
  * Measures the exact heights of invoice components in a 560px sandbox
  * and calculates smart pagination so that:
  * 1. Product rows are NEVER split between pages.
@@ -110,7 +140,7 @@ function paginateInvoice(invoice: Invoice): PaginatedPageData[] {
     const subStaticHeight = subStaticWrap.offsetHeight;
     sandbox.removeChild(subStaticWrap);
 
-    // Measure Complete Footer Block
+    // Measure Complete Footer Block (includes account summary)
     const footerWrap = document.createElement('div');
     footerWrap.innerHTML = `
       <div style="border-top: 2px solid #0f172a; padding-top: 8px; margin-top: 10px; width: 100%; box-sizing: border-box;">
@@ -144,6 +174,7 @@ function paginateInvoice(invoice: Invoice): PaginatedPageData[] {
                   ⭐ BONUS / بونص
                 </div>
               ` : ''}
+              ${buildAccountSummaryHtml(invoice)}
             </div>
           </div>
         ` : `
@@ -170,6 +201,7 @@ function paginateInvoice(invoice: Invoice): PaginatedPageData[] {
                   ⭐ BONUS / بونص
                 </div>
               ` : ''}
+              ${buildAccountSummaryHtml(invoice)}
             </div>
           </div>
         `}
@@ -466,6 +498,7 @@ function createA5PageElement(
                 ⭐ BONUS / بونص
               </div>
             ` : ''}
+            ${buildAccountSummaryHtml(invoice)}
           </div>
         </div>
       `;
@@ -496,6 +529,7 @@ function createA5PageElement(
                 ⭐ BONUS / بونص
               </div>
             ` : ''}
+            ${buildAccountSummaryHtml(invoice)}
           </div>
         </div>
       `;

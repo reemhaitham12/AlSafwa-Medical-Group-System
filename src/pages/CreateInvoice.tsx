@@ -52,6 +52,13 @@ export const CreateInvoice: React.FC = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customersList, setCustomersList] = useState<Customer[]>([]);
 
+  // ── Previous Debt State ──────────────────────────────────────────
+  // Loaded from customer.previous_debt when selecting an existing customer,
+  // or from invoice.previous_debt_snapshot when editing an invoice.
+  // Always separate from subtotal / discounts / finalTotal.
+  const [previousDebt, setPreviousDebt] = useState<number>(0);
+  // ─────────────────────────────────────────────────────────────────
+
   // Product Selection State
   const [productsList, setProductsList] = useState<Product[]>([]);
   const [productSearch, setProductSearch] = useState('');
@@ -111,6 +118,8 @@ export const CreateInvoice: React.FC = () => {
           setDiscountPercentage(Number(inv.discount_percentage) || 0);
           setNotes(inv.notes || '');
           setIsBonus(Boolean(inv.is_bonus));
+          // In edit mode: load the SNAPSHOT, which represents debt before this invoice was added
+          setPreviousDebt(Number(inv.previous_debt_snapshot) || 0);
 
           if (inv.items && Array.isArray(inv.items)) {
             setItems(
@@ -142,6 +151,7 @@ export const CreateInvoice: React.FC = () => {
         setDiscountPercentage(0);
         setNotes('');
         setIsBonus(false);
+        setPreviousDebt(0);
         setProductSearch('');
         setSelectedProduct(null);
         setItemQty(1);
@@ -177,10 +187,14 @@ export const CreateInvoice: React.FC = () => {
   const subtotal = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
   const discountAmount = (subtotal * (Number(discountPercentage) || 0)) / 100;
   const finalTotal = Math.max(0, subtotal - discountAmount);
+  // Previous debt is kept separate — never folded into finalTotal
+  const totalDue = previousDebt + finalTotal;
 
   const handleSelectCustomer = (cust: Customer) => {
     setSelectedCustomerId(cust.id);
     setCustomerName(cust.name);
+    // Load the customer's current outstanding debt as the snapshot for this new invoice
+    setPreviousDebt(Number(cust.previous_debt) || 0);
   };
 
   const handleAddItem = (e?: React.SyntheticEvent) => {
@@ -297,6 +311,7 @@ export const CreateInvoice: React.FC = () => {
     setDiscountPercentage(0);
     setNotes('');
     setIsBonus(false);
+    setPreviousDebt(0);
     setProductSearch('');
     setSelectedProduct(null);
     setItemQty(1);
@@ -347,6 +362,7 @@ export const CreateInvoice: React.FC = () => {
         discount_percentage: Number(discountPercentage) || 0,
         discount_amount: discountAmount,
         final_total: finalTotal,
+        previous_debt_snapshot: previousDebt,
         notes: notes.trim() || null,
         is_bonus: isBonus,
         items,
@@ -356,9 +372,17 @@ export const CreateInvoice: React.FC = () => {
 
       showSuccess(
         isArabic
-          ? `تم حفظ الفاتورة ${assignedNum} بنجاح`
-          : `Invoice ${assignedNum} saved successfully`
+          ? `تم حفظ الفاتورة ${assignedNum} بنجاح وتم تحديث حساب العميل تلقائياً`
+          : `Invoice ${assignedNum} saved and customer debt updated automatically`
       );
+
+      // Refresh customers list so any updated debt is fresh immediately
+      try {
+        const freshCusts = await customersService.getAll();
+        setCustomersList(freshCusts || []);
+      } catch (err) {
+        console.error('Failed to reload customers after invoice creation:', err);
+      }
 
       await resetFormForNextInvoice();
     } catch (err: any) {
@@ -381,6 +405,7 @@ export const CreateInvoice: React.FC = () => {
         discount_percentage: Number(discountPercentage) || 0,
         discount_amount: discountAmount,
         final_total: finalTotal,
+        previous_debt_snapshot: previousDebt,
         notes: notes.trim() || null,
         is_bonus: isBonus,
         items: items.map((item) => ({
@@ -392,7 +417,7 @@ export const CreateInvoice: React.FC = () => {
         })),
       });
 
-      showSuccess(isArabic ? 'تم تعديل الفاتورة بنجاح' : 'Invoice updated successfully');
+      showSuccess(isArabic ? 'تم تعديل الفاتورة وتحديث فرق المديونية بنجاح' : 'Invoice updated and debt difference applied successfully');
       setShowConfirm(false);
       navigate('/invoices');
     } catch (err: any) {
@@ -482,6 +507,8 @@ export const CreateInvoice: React.FC = () => {
                     onChange={(e) => {
                       setCustomerName(e.target.value);
                       setSelectedCustomerId(null);
+                      // When typing manually, reset debt to 0
+                      setPreviousDebt(0);
                     }}
                     required
                   />
@@ -501,14 +528,31 @@ export const CreateInvoice: React.FC = () => {
                           onClick={() => handleSelectCustomer(c)}
                           className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
                             selectedCustomerId === c.id
-                              ? 'bg-brand-500 text-white border-brand-500'
+                              ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
                               : 'bg-white border-surface-200 text-surface-700 hover:bg-surface-50'
                           }`}
                         >
                           {c.name}
+                          {(c.previous_debt ?? 0) > 0 && (
+                            <span className={`mr-1.5 text-[10px] font-bold ${selectedCustomerId === c.id ? 'text-amber-200' : 'text-amber-600'}`}>
+                              ({formatCurrency(c.previous_debt, true)})
+                            </span>
+                          )}
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Previous Debt display when a customer is selected */}
+                {selectedCustomerId && previousDebt > 0 && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-center justify-between">
+                    <span className="font-semibold">
+                      {isArabic ? 'المديونية السابقة للعميل قبل هذه الفاتورة:' : "Customer's Outstanding Debt (Before Order):"}
+                    </span>
+                    <span className="font-extrabold text-amber-800 text-sm">
+                      {formatCurrency(previousDebt, true)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -728,15 +772,15 @@ export const CreateInvoice: React.FC = () => {
                       </div>
                       <p className="text-[11px] text-amber-800 leading-relaxed">
                         {isArabic
-                          ? 'تظل أسعار المنتجات وإجمالي الفاتورة ظاهرة كما هي، ولكن يتم استثناء قيمة الفاتورة بالكامل من إجمالي المبيعات.'
-                          : 'Product prices and total remain visible, but this invoice amount is excluded from total sales.'}
+                          ? 'تظل أسعار المنتجات وإجمالي الفاتورة ظاهرة كما هي، ولكن يتم استثناء قيمة الفاتورة بالكامل من إجمالي المبيعات ومن مديونية العميل.'
+                          : 'Product prices and total remain visible, but this invoice amount is excluded from sales and customer debt.'}
                       </p>
                     </div>
                   ) : (
                     <p className="text-[11px] text-surface-500">
                       {isArabic
-                        ? 'فاتورة بيع عادية — يُحسب إجمالي قيمتها ضمن المبيعات والإيرادات.'
-                        : 'Normal sale invoice — counted towards total revenue.'}
+                        ? 'فاتورة بيع عادية — يُحسب إجمالي قيمتها ضمن المبيعات ويُضاف لمديونية العميل.'
+                        : 'Normal sale invoice — counted towards total revenue and added to customer debt.'}
                     </p>
                   )}
                 </div>
@@ -766,7 +810,7 @@ export const CreateInvoice: React.FC = () => {
                 {isBonus && (
                   <div className="py-2 px-3 bg-amber-100 border border-amber-300 rounded-lg text-amber-900 font-extrabold text-center text-xs flex items-center justify-center gap-1.5">
                     <span>⭐</span>
-                    <span>{isArabic ? 'فاتورة بونص (مستثناة من إجمالي المبيعات)' : 'Bonus Invoice (Excluded from Sales)'}</span>
+                    <span>{isArabic ? 'فاتورة بونص (مستثناة من المبيعات والمديونية)' : 'Bonus Invoice (Excluded from Sales & Debt)'}</span>
                   </div>
                 )}
 
@@ -783,6 +827,7 @@ export const CreateInvoice: React.FC = () => {
                     type="number"
                     min="0"
                     max="100"
+                    step="0.01"
                     value={discountPercentage}
                     onChange={(e) => setDiscountPercentage(Number(e.target.value))}
                   />
@@ -798,6 +843,43 @@ export const CreateInvoice: React.FC = () => {
                   <span className="text-emerald-700 text-lg">{formatCurrency(finalTotal, true)}</span>
                 </div>
 
+                {/* ── Customer Account Summary ─────────────────────────── */}
+                <div className="mt-2 pt-3 border-t-2 border-dashed border-surface-200 space-y-2">
+                  <p className="text-[11px] font-bold text-surface-500 uppercase tracking-wide">
+                    {isArabic ? 'ملخص حساب العميل' : 'Customer Account Summary'}
+                  </p>
+
+                  <div className="flex justify-between py-1.5 border-b border-surface-100">
+                    <span className="text-surface-600">{isArabic ? 'المديونية السابقة (قبل الفاتورة):' : 'Previous Debt (Before Order):'}</span>
+                    <span className={`font-bold ${previousDebt > 0 ? 'text-amber-700' : 'text-surface-500'}`}>
+                      {formatCurrency(previousDebt, true)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between py-1.5 border-b border-surface-100">
+                    <span className="text-surface-600">{isArabic ? 'سعر الفاتورة:' : 'Invoice Total:'}</span>
+                    <span className="font-bold text-surface-900">{formatCurrency(finalTotal, true)}</span>
+                  </div>
+
+                  <div className="flex justify-between py-2.5 px-3 bg-surface-900 rounded-xl text-white font-extrabold">
+                    <span>{isArabic ? 'المجموع المستحق (الرصيد الجديد):' : 'Total Due (New Balance):'}</span>
+                    <span className="text-base">{formatCurrency(totalDue, true)}</span>
+                  </div>
+
+                  {selectedCustomerId && (
+                    <p className="text-[10px] text-surface-500 text-center pt-1">
+                      {isArabic
+                        ? (isBonus
+                            ? '⭐ فاتورة بونص: لن تتم إضافة قيمة هذه الفاتورة لمديونية العميل.'
+                            : 'يتم تحديث رصيد العميل تلقائياً في قاعدة البيانات فور حفظ الفاتورة.')
+                        : (isBonus
+                            ? '⭐ Bonus invoice: will not be added to customer debt.'
+                            : 'Customer balance is automatically updated in database upon save.')}
+                    </p>
+                  )}
+                </div>
+                {/* ─────────────────────────────────────────────────────── */}
+
                 <div className="pt-2">
                   <Button
                     type="submit"
@@ -812,8 +894,8 @@ export const CreateInvoice: React.FC = () => {
                         ? (isArabic ? 'جاري حفظ التعديلات...' : 'Saving changes...')
                         : (isArabic ? 'جاري الحفظ...' : 'Saving...')
                       : isEditMode
-                      ? (isArabic ? 'حفظ التعديلات' : 'Save Changes')
-                      : (isArabic ? 'حفظ الفاتورة في السحابة' : 'Save Invoice to Supabase')}
+                      ? (isArabic ? 'حفظ التعديلات وتحديث المديونية' : 'Save Changes & Update Debt')
+                      : (isArabic ? 'حفظ الفاتورة وتحديث الحساب' : 'Save Invoice & Update Debt')}
                   </Button>
                 </div>
               </div>
@@ -826,7 +908,11 @@ export const CreateInvoice: React.FC = () => {
       <ConfirmModal
         isOpen={showConfirm}
         title={isArabic ? 'تأكيد تعديل الفاتورة' : 'Confirm Edit Invoice'}
-        message={isArabic ? 'هل تريد حفظ التعديلات على هذه الفاتورة؟' : 'Do you want to save changes to this invoice?'}
+        message={
+          isArabic
+            ? 'هل تريد حفظ التعديلات على هذه الفاتورة؟ سيتم تطبيق فرق المبلغ فقط على مديونية العميل دون تكرار.'
+            : 'Save changes to this invoice? Only the difference between old and new totals will be applied to the customer debt.'
+        }
         confirmText={isSubmitting ? (isArabic ? 'جاري حفظ التعديلات...' : 'Saving changes...') : (isArabic ? 'نعم، حفظ التعديلات' : 'Yes, save changes')}
         cancelText={isArabic ? 'إلغاء' : 'Cancel'}
         variant="primary"
