@@ -251,13 +251,32 @@
   /* Customer info & totals box borders */
   #printable-invoice .bg-surface-50,
   #printable-invoice .bg-slate-50,
-  #printable-invoice .bg-emerald-50,
-  #printable-invoice .bg-emerald-100\/70,
   #printable-invoice .bg-brand-50,
   #printable-stock-order .bg-surface-50,
   #printable-inventory .bg-surface-50 {
     border: 1px solid #000000 !important;
     background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Invoice summary highlights for print */
+  #printable-invoice .summary-final-total {
+    background-color: #ecfdf5 !important;
+    border: 1.5px solid #059669 !important;
+    color: #000000 !important;
+  }
+
+  #printable-invoice .summary-total-due {
+    background-color: #fef3c7 !important;
+    border: 2px solid #000000 !important;
+    color: #000000 !important;
+  }
+
+  /* Ensure all numbers in printable invoice are solid pure black and bold */
+  #printable-invoice td,
+  #printable-invoice th,
+  #printable-invoice [data-invoice-summary] span,
+  #printable-invoice [data-invoice-summary] h3 {
     color: #000000 !important;
   }
 

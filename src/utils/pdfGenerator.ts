@@ -25,30 +25,95 @@ interface PaginatedPageData {
 }
 
 /**
- * Builds the HTML string for the Customer Account Summary block
- * that is appended below the existing totals box in the PDF footer.
+ * Builds the complete horizontal invoice summary, customer account summary,
+ * notes, and thank you footer for A5 PDF export.
+ *
+ * - Row 1: Invoice totals in 1 horizontal row (3 columns: الإجمالي | الخصم | الإجمالي بعد الخصم)
+ * - Header: «ملخص حساب العميل»
+ * - Row 2: Customer account summary in 1 horizontal row (3 columns: المديونية السابقة | سعر الفاتورة | المجموع المستحق)
+ * - Row 3: Notes & thank-you signature
+ *
+ * All numeric values are explicitly styled in solid pure black (#000000) with bold weight (700 or 900).
  */
-function buildAccountSummaryHtml(invoice: Invoice): string {
+function buildHorizontalFooterHtml(invoice: Invoice): string {
   const previousDebt = Number(invoice.previous_debt_snapshot) || 0;
   const finalTotal = Number(invoice.final_total) || 0;
   const totalDue = previousDebt + finalTotal;
+  const hasNote = Boolean(invoice.notes && invoice.notes.trim());
 
   return `
-    <div style="margin-top: 8px; padding-top: 7px; border-top: 1px dashed #64748b; width: 100%; box-sizing: border-box;">
-      <div style="font-size: 8.5px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 5px; line-height: 1.4;">
-        ملخص حساب العميل
+    <div style="border-top: 2px solid #000000; padding-top: 6px; margin-top: 8px; width: 100%; box-sizing: border-box; direction: rtl; font-family: Cairo, system-ui, sans-serif;">
+      ${invoice.is_bonus ? `
+        <div style="margin-bottom: 5px; padding: 2.5px 6px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; text-align: center; font-size: 8.5px; font-weight: 900; color: #000000; line-height: 1.3;">
+          ⭐ فاتورة بونص (مستثناة من المبيعات والمديونية) / BONUS INVOICE
+        </div>
+      ` : ''}
+
+      <!-- Row 1: Invoice Totals (3 parts in 1 horizontal row) -->
+      <div style="display: flex; gap: 5px; width: 100%; box-sizing: border-box;">
+        <!-- 1. Subtotal / الإجمالي -->
+        <div style="flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: center; padding: 4.5px 6px; background: #f8fafc; border: 1px solid #334155; border-radius: 4px; box-sizing: border-box;">
+          <span style="font-size: 9.5px; font-weight: 600; color: #1e293b; white-space: nowrap;">الإجمالي:</span>
+          <span style="font-size: 10.5px; font-weight: 700; color: #000000; white-space: nowrap;">${formatCurrency(invoice.subtotal, true)}</span>
+        </div>
+
+        <!-- 2. Discount / الخصم -->
+        <div style="flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: center; padding: 4.5px 6px; background: #f8fafc; border: 1px solid #334155; border-radius: 4px; box-sizing: border-box;">
+          <span style="font-size: 9.5px; font-weight: 600; color: #1e293b; white-space: nowrap;">
+            الخصم ${invoice.discount_percentage > 0 ? `(${invoice.discount_percentage}%)` : ''}:
+          </span>
+          <span style="font-size: 10.5px; font-weight: 700; color: #000000; white-space: nowrap;">
+            ${invoice.discount_amount > 0 ? `- ${formatCurrency(invoice.discount_amount, true)}` : '0.00 ج.م'}
+          </span>
+        </div>
+
+        <!-- 3. Final Total / الإجمالي بعد الخصم (Calm soft emerald highlight) -->
+        <div style="flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: center; padding: 4.5px 6px; background: #ecfdf5; border: 1.5px solid #059669; border-radius: 4px; box-sizing: border-box;">
+          <span style="font-size: 9.5px; font-weight: 800; color: #064e3b; white-space: nowrap;">الإجمالي بعد الخصم:</span>
+          <span style="font-size: 11px; font-weight: 900; color: #000000; white-space: nowrap;">${formatCurrency(invoice.final_total, true)}</span>
+        </div>
       </div>
-      <div style="display: flex; justify-content: space-between; padding: 2.5px 0; border-bottom: 1px solid #e2e8f0; line-height: 1.4;">
-        <span style="color: #475569; font-size: 10px;">المديونية السابقة:</span>
-        <span style="font-weight: bold; color: ${previousDebt > 0 ? '#92400e' : '#64748b'}; white-space: nowrap; font-size: 10px;">${formatCurrency(previousDebt, true)}</span>
+
+      <!-- Customer Account Summary Header -->
+      <div style="margin-top: 5px; padding-top: 4px; border-top: 1px dashed #64748b; display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 9px; font-weight: bold; color: #000000; text-transform: uppercase; letter-spacing: 0.02em;">
+          ملخص حساب العميل
+        </span>
       </div>
-      <div style="display: flex; justify-content: space-between; padding: 2.5px 0; border-bottom: 1px solid #e2e8f0; line-height: 1.4;">
-        <span style="color: #475569; font-size: 10px;">سعر الفاتورة:</span>
-        <span style="font-weight: bold; color: #0f172a; white-space: nowrap; font-size: 10px;">${formatCurrency(finalTotal, true)}</span>
+
+      <!-- Row 2: Customer Account Details (3 horizontal columns) -->
+      <div style="display: flex; gap: 5px; width: 100%; margin-top: 3px; box-sizing: border-box;">
+        <!-- 1. Previous Debt / المديونية السابقة -->
+        <div style="flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: center; padding: 4.5px 6px; background: #f8fafc; border: 1px solid #334155; border-radius: 4px; box-sizing: border-box;">
+          <span style="font-size: 9.5px; font-weight: 600; color: #1e293b; white-space: nowrap;">المديونية السابقة:</span>
+          <span style="font-size: 10.5px; font-weight: 700; color: #000000; white-space: nowrap;">${formatCurrency(previousDebt, true)}</span>
+        </div>
+
+        <!-- 2. Invoice Price / سعر الفاتورة -->
+        <div style="flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: center; padding: 4.5px 6px; background: #f8fafc; border: 1px solid #334155; border-radius: 4px; box-sizing: border-box;">
+          <span style="font-size: 9.5px; font-weight: 600; color: #1e293b; white-space: nowrap;">سعر الفاتورة:</span>
+          <span style="font-size: 10.5px; font-weight: 700; color: #000000; white-space: nowrap;">${formatCurrency(finalTotal, true)}</span>
+        </div>
+
+        <!-- 3. Total Due / المجموع المستحق (Prominently highlighted) -->
+        <div style="flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: center; padding: 4.5px 6px; background: #fef3c7; border: 1.5px solid #d97706; border-radius: 4px; box-sizing: border-box;">
+          <span style="font-size: 9.5px; font-weight: 900; color: #78350f; white-space: nowrap;">المجموع المستحق:</span>
+          <span style="font-size: 11px; font-weight: 900; color: #000000; white-space: nowrap;">${formatCurrency(totalDue, true)}</span>
+        </div>
       </div>
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 7px; background: #0f172a; border-radius: 4px; margin-top: 4px; line-height: 1.4;">
-        <span style="font-weight: 900; color: #ffffff; font-size: 10px;">المجموع المستحق:</span>
-        <span style="font-weight: 900; color: #ffffff; white-space: nowrap; font-size: 11px;">${formatCurrency(totalDue, true)}</span>
+
+      <!-- Notes and Thank You Row -->
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 5px; padding-top: 4px; border-top: 1px solid #e2e8f0; width: 100%; box-sizing: border-box;">
+        ${hasNote ? `
+          <div style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 6px; background: #ffffff; text-align: right;">
+            <div style="font-weight: bold; color: #000000; font-size: 9px; line-height: 1.3;">الملاحظات / Note:</div>
+            <div style="color: #000000; font-size: 8.5px; line-height: 1.35; white-space: pre-wrap; font-weight: 500;">${invoice.notes?.trim()}</div>
+          </div>
+        ` : '<div></div>'}
+        <div style="text-align: left; line-height: 1.3; shrink: 0;">
+          <div style="font-size: 9.5px; font-weight: bold; color: #000000;">شكراً لتعاونكم</div>
+          <div style="font-size: 8.5px; color: #334155; font-weight: 600;">شركة الصفوة ميديكال جروب</div>
+        </div>
       </div>
     </div>
   `;
@@ -92,14 +157,14 @@ function paginateInvoice(invoice: Invoice): PaginatedPageData[] {
             <div style="font-size: 9.5px; color: #64748b; line-height: 1.4; margin-top: 2px;">القاهرة - مصر | مستلزمات GPL</div>
           </div>
           <div style="text-align: left;">
-            <span style="font-size: 12px; font-family: monospace; font-weight: bold; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; border: 1px solid #cbd5e1; line-height: 1.4;">${invoice.invoice_number}</span>
-            <div style="font-size: 9.5px; color: #475569; margin-top: 4px; line-height: 1.4;">تاريخ الإصدار: ${formatDate(invoice.created_at, true)}</div>
+            <span style="font-size: 12px; font-family: monospace; font-weight: 700; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; border: 1px solid #cbd5e1; color: #000000; line-height: 1.4;">${invoice.invoice_number}</span>
+            <div style="font-size: 9.5px; color: #475569; margin-top: 4px; line-height: 1.4;">تاريخ الإصدار: <span style="color: #000000; font-weight: 600;">${formatDate(invoice.created_at, true)}</span></div>
           </div>
         </div>
       </div>
       <div style="background: #f8fafc; border-radius: 6px; padding: 7px 12px; border: 1px solid #cbd5e1; margin-bottom: 8px; font-size: 11px; line-height: 1.5; display: flex; justify-content: space-between; align-items: center;">
         <div><strong style="color: #475569;">اسم العميل:</strong> <span style="font-weight: bold; color: #0f172a; margin-right: 4px;">${invoice.customer_name_snapshot || 'عميل نقدي'}</span></div>
-        ${invoice.customer?.phone ? `<div><strong style="color: #475569;">الهاتف:</strong> <span style="font-weight: bold; color: #0f172a; margin-right: 4px;">${invoice.customer.phone}</span></div>` : ''}
+        ${invoice.customer?.phone ? `<div><strong style="color: #475569;">الهاتف:</strong> <span style="font-weight: 700; color: #000000; margin-right: 4px;">${invoice.customer.phone}</span></div>` : ''}
       </div>
       <table style="width: 100%; border-collapse: collapse; border: 1px solid #334155; font-size: 11px;">
         <thead>
@@ -121,7 +186,7 @@ function paginateInvoice(invoice: Invoice): PaginatedPageData[] {
     const subStaticWrap = document.createElement('div');
     subStaticWrap.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-bottom: 8px; font-size: 11px; line-height: 1.4;">
-        <span style="font-weight: bold; color: #1e293b;">${APP_CONFIG.nameAr} — ${invoice.invoice_number}</span>
+        <span style="font-weight: bold; color: #000000;">${APP_CONFIG.nameAr} — ${invoice.invoice_number}</span>
         <span style="font-size: 10px; color: #64748b; font-family: monospace;">متابعة الأصناف</span>
       </div>
       <table style="width: 100%; border-collapse: collapse; border: 1px solid #334155; font-size: 11px;">
@@ -140,75 +205,11 @@ function paginateInvoice(invoice: Invoice): PaginatedPageData[] {
     const subStaticHeight = subStaticWrap.offsetHeight;
     sandbox.removeChild(subStaticWrap);
 
-    // Measure Complete Footer Block (includes account summary)
+    // Measure Complete Horizontal Footer Block (includes invoice totals & account summary)
     const footerWrap = document.createElement('div');
-    footerWrap.innerHTML = `
-      <div style="border-top: 2px solid #0f172a; padding-top: 8px; margin-top: 10px; width: 100%; box-sizing: border-box;">
-        ${hasNote ? `
-          <div style="display: flex; gap: 8px; align-items: stretch; justify-content: space-between; width: 100%;">
-            <div style="flex: 1; border: 1px solid #334155; border-radius: 6px; padding: 7px 10px; font-size: 10px; display: flex; flex-direction: column; justify-content: space-between; background: #ffffff;">
-              <div>
-                <div style="font-weight: bold; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 5px; font-size: 10.5px; line-height: 1.4;">الملاحظات / Note:</div>
-                <div style="color: #334155; line-height: 1.5; white-space: pre-wrap; font-size: 9.5px;">${invoice.notes?.trim()}</div>
-              </div>
-              <div style="border-top: 1px solid #e2e8f0; padding-top: 5px; margin-top: 6px; text-align: center; line-height: 1.4;">
-                <div style="font-weight: bold; color: #0f172a; font-size: 10px;">شكراً لتعاونكم</div>
-                <div style="font-size: 9px; color: #475569;">شركة الصفوة ميديكال جروب</div>
-              </div>
-            </div>
-            <div style="width: 225px; shrink: 0; background: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 7px 10px; font-size: 11px;">
-              <div style="display: flex; justify-content: space-between; padding: 3.5px 0; border-bottom: 1px solid #e2e8f0; line-height: 1.4;">
-                <span style="color: #475569;">الإجمالي:</span>
-                <span style="font-weight: bold; color: #0f172a; white-space: nowrap;">${formatCurrency(invoice.subtotal, true)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 3.5px 0; border-bottom: 1px solid #e2e8f0; line-height: 1.4;">
-                <span style="color: #475569;">الخصم ${invoice.discount_percentage > 0 ? `(${invoice.discount_percentage}%)` : ''}:</span>
-                <span style="font-weight: bold; color: #92400e; white-space: nowrap;">${invoice.discount_amount > 0 ? `- ${formatCurrency(invoice.discount_amount, true)}` : '0.00 ج.م'}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; background: #dcfce7; border: 1px solid #16a34a; border-radius: 4px; font-weight: 900; margin-top: 5px; line-height: 1.4;">
-                <span>الإجمالي بعد الخصم:</span>
-                <span style="color: #166534; font-size: 12px; white-space: nowrap;">${formatCurrency(invoice.final_total, true)}</span>
-              </div>
-              ${invoice.is_bonus ? `
-                <div style="margin-top: 5px; padding: 2.5px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; text-align: center; font-size: 9px; font-weight: 900; color: #92400e; line-height: 1.3;">
-                  ⭐ BONUS / بونص
-                </div>
-              ` : ''}
-              ${buildAccountSummaryHtml(invoice)}
-            </div>
-          </div>
-        ` : `
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%;">
-            <div style="text-align: right; line-height: 1.5;">
-              <div style="font-size: 11px; font-weight: bold; color: #0f172a;">شكراً لتعاونكم</div>
-              <div style="font-size: 10px; color: #475569;">شركة الصفوة ميديكال جروب</div>
-            </div>
-            <div style="width: 225px; shrink: 0; background: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 7px 10px; font-size: 11px;">
-              <div style="display: flex; justify-content: space-between; padding: 3.5px 0; border-bottom: 1px solid #e2e8f0; line-height: 1.4;">
-                <span style="color: #475569;">الإجمالي:</span>
-                <span style="font-weight: bold; color: #0f172a; white-space: nowrap;">${formatCurrency(invoice.subtotal, true)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 3.5px 0; border-bottom: 1px solid #e2e8f0; line-height: 1.4;">
-                <span style="color: #475569;">الخصم ${invoice.discount_percentage > 0 ? `(${invoice.discount_percentage}%)` : ''}:</span>
-                <span style="font-weight: bold; color: #92400e; white-space: nowrap;">${invoice.discount_amount > 0 ? `- ${formatCurrency(invoice.discount_amount, true)}` : '0.00 ج.م'}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; background: #dcfce7; border: 1px solid #16a34a; border-radius: 4px; font-weight: 900; margin-top: 5px; line-height: 1.4;">
-                <span>الإجمالي بعد الخصم:</span>
-                <span style="color: #166534; font-size: 12px; white-space: nowrap;">${formatCurrency(invoice.final_total, true)}</span>
-              </div>
-              ${invoice.is_bonus ? `
-                <div style="margin-top: 5px; padding: 2.5px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; text-align: center; font-size: 9px; font-weight: 900; color: #92400e; line-height: 1.3;">
-                  ⭐ BONUS / بونص
-                </div>
-              ` : ''}
-              ${buildAccountSummaryHtml(invoice)}
-            </div>
-          </div>
-        `}
-      </div>
-    `;
+    footerWrap.innerHTML = buildHorizontalFooterHtml(invoice);
     sandbox.appendChild(footerWrap);
-    const footerHeight = footerWrap.offsetHeight + 12; // includes margin-top (10px) + small buffer
+    const footerHeight = footerWrap.offsetHeight + 10; // includes small safety buffer
     sandbox.removeChild(footerWrap);
 
     // Measure each product row height dynamically
@@ -220,11 +221,11 @@ function paginateInvoice(invoice: Invoice): PaginatedPageData[] {
     items.forEach((item, idx) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td style="padding: 6.5px 6px; width: 28px; text-align: center; border: 1px solid #334155; font-family: monospace; font-size: 10px; line-height: 1.5; vertical-align: middle;">${idx + 1}</td>
+        <td style="padding: 6.5px 6px; width: 28px; text-align: center; border: 1px solid #334155; font-family: monospace; font-size: 10px; font-weight: 700; color: #000000; line-height: 1.5; vertical-align: middle;">${idx + 1}</td>
         <td style="padding: 6.5px 8px; text-align: right; border: 1px solid #334155; font-weight: bold; font-size: 11px; word-break: break-word; line-height: 1.5; vertical-align: middle;">${item.product_name_snapshot}</td>
-        <td style="padding: 6.5px 6px; width: 44px; text-align: center; border: 1px solid #334155; font-weight: bold; font-size: 11px; line-height: 1.5; vertical-align: middle;">${item.quantity}</td>
-        <td style="padding: 6.5px 8px; width: 75px; text-align: right; border: 1px solid #334155; font-size: 11px; line-height: 1.5; vertical-align: middle;">${formatCurrency(item.unit_price, true)}</td>
-        <td style="padding: 6.5px 8px; width: 85px; text-align: left; border: 1px solid #334155; font-weight: bold; font-size: 11px; line-height: 1.5; vertical-align: middle;">${formatCurrency(item.total, true)}</td>
+        <td style="padding: 6.5px 6px; width: 44px; text-align: center; border: 1px solid #334155; font-weight: 700; color: #000000; font-size: 11px; line-height: 1.5; vertical-align: middle;">${item.quantity}</td>
+        <td style="padding: 6.5px 8px; width: 75px; text-align: right; border: 1px solid #334155; font-weight: 700; color: #000000; font-size: 11px; line-height: 1.5; vertical-align: middle;">${formatCurrency(item.unit_price, true)}</td>
+        <td style="padding: 6.5px 8px; width: 85px; text-align: left; border: 1px solid #334155; font-weight: 700; color: #000000; font-size: 11px; line-height: 1.5; vertical-align: middle;">${formatCurrency(item.total, true)}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -338,8 +339,6 @@ function createA5PageElement(
   pageData: PaginatedPageData,
   totalPages: number
 ): HTMLElement {
-  const hasNote = Boolean(invoice.notes && invoice.notes.trim());
-
   const page = document.createElement('div');
   page.className = 'a5-invoice-page';
   page.style.cssText = `
@@ -378,12 +377,12 @@ function createA5PageElement(
                 ⭐ بونص
               </span>
             ` : ''}
-            <span style="font-size: 12px; font-family: monospace; font-weight: bold; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; border: 1px solid #cbd5e1; color: #0f172a; line-height: 1.4;">
+            <span style="font-size: 12px; font-family: monospace; font-weight: 700; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; border: 1px solid #cbd5e1; color: #000000; line-height: 1.4;">
               ${invoice.invoice_number}
             </span>
           </div>
           <div style="font-size: 9.5px; color: #475569; margin-top: 4px; line-height: 1.4;">
-            تاريخ الإصدار: ${formatDate(invoice.created_at, true)}
+            تاريخ الإصدار: <span style="color: #000000; font-weight: 600;">${formatDate(invoice.created_at, true)}</span>
           </div>
         </div>
       </div>
@@ -395,7 +394,7 @@ function createA5PageElement(
     custBox.style.cssText = 'background: #f8fafc; border-radius: 6px; padding: 7px 12px; border: 1px solid #cbd5e1; margin-bottom: 8px; font-size: 11px; line-height: 1.5; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box;';
     custBox.innerHTML = `
       <div><span style="color: #64748b;">اسم العميل:</span> <strong style="color: #0f172a; margin-right: 4px;">${invoice.customer_name_snapshot || 'عميل نقدي'}</strong></div>
-      ${invoice.customer?.phone ? `<div><span style="color: #64748b;">الهاتف:</span> <strong style="color: #0f172a; margin-right: 4px;">${invoice.customer.phone}</strong></div>` : ''}
+      ${invoice.customer?.phone ? `<div><span style="color: #64748b;">الهاتف:</span> <strong style="color: #000000; font-weight: 700; margin-right: 4px;">${invoice.customer.phone}</strong></div>` : ''}
     `;
     page.appendChild(custBox);
   } else {
@@ -403,7 +402,7 @@ function createA5PageElement(
     const subHeader = document.createElement('div');
     subHeader.style.cssText = 'display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-bottom: 8px; font-size: 11px; line-height: 1.4; width: 100%;';
     subHeader.innerHTML = `
-      <span style="font-weight: bold; color: #1e293b;">${APP_CONFIG.nameAr} — فاتورة رقم ${invoice.invoice_number}</span>
+      <span style="font-weight: bold; color: #000000;">${APP_CONFIG.nameAr} — فاتورة رقم ${invoice.invoice_number}</span>
       <span style="font-size: 10px; color: #64748b; font-family: monospace;">(متابعة أصناف الفاتورة)</span>
     `;
     page.appendChild(subHeader);
@@ -429,19 +428,19 @@ function createA5PageElement(
     pageData.items.forEach((item, idx) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td style="padding: 6.5px 6px; width: 28px; text-align: center; border: 1px solid #334155; font-family: monospace; font-size: 10px; color: #475569; line-height: 1.5; vertical-align: middle;">
+        <td style="padding: 6.5px 6px; width: 28px; text-align: center; border: 1px solid #334155; font-family: monospace; font-size: 10px; font-weight: 700; color: #000000; line-height: 1.5; vertical-align: middle;">
           ${pageData.startIndex + idx + 1}
         </td>
         <td style="padding: 6.5px 8px; text-align: right; border: 1px solid #334155; font-weight: bold; color: #0f172a; word-break: break-word; line-height: 1.5; vertical-align: middle;">
           ${item.product_name_snapshot}
         </td>
-        <td style="padding: 6.5px 6px; width: 44px; text-align: center; border: 1px solid #334155; font-weight: bold; color: #0f172a; line-height: 1.5; vertical-align: middle;">
+        <td style="padding: 6.5px 6px; width: 44px; text-align: center; border: 1px solid #334155; font-weight: 700; color: #000000; line-height: 1.5; vertical-align: middle;">
           ${item.quantity}
         </td>
-        <td style="padding: 6.5px 8px; width: 75px; text-align: right; border: 1px solid #334155; color: #0f172a; line-height: 1.5; vertical-align: middle;">
+        <td style="padding: 6.5px 8px; width: 75px; text-align: right; border: 1px solid #334155; font-weight: 700; color: #000000; line-height: 1.5; vertical-align: middle;">
           ${formatCurrency(item.unit_price, true)}
         </td>
-        <td style="padding: 6.5px 8px; width: 85px; text-align: left; border: 1px solid #334155; font-weight: bold; color: #0f172a; line-height: 1.5; vertical-align: middle;">
+        <td style="padding: 6.5px 8px; width: 85px; text-align: left; border: 1px solid #334155; font-weight: 700; color: #000000; line-height: 1.5; vertical-align: middle;">
           ${formatCurrency(item.total, true)}
         </td>
       `;
@@ -455,85 +454,11 @@ function createA5PageElement(
   table.appendChild(tbody);
   page.appendChild(table);
 
-  // 3. Footer: Sits naturally after table (NO huge empty space, unbreakable block)
+  // 3. Footer: Horizontal invoice totals + account summary + notes/signature
   if (pageData.isFinalPage) {
     const footerDiv = document.createElement('div');
     footerDiv.className = 'invoice-footer';
-    footerDiv.style.cssText = 'border-top: 2px solid #0f172a; padding-top: 8px; margin-top: 10px; width: 100%; box-sizing: border-box;';
-
-    if (hasNote) {
-      // Notes Exist: Render Notes Box + Totals Box side-by-side (RTL: Notes right, Totals left)
-      footerDiv.innerHTML = `
-        <div style="display: flex; gap: 8px; align-items: stretch; justify-content: space-between; width: 100%;">
-          <div style="flex: 1; border: 1px solid #334155; border-radius: 6px; padding: 7px 10px; font-size: 10px; display: flex; flex-direction: column; justify-content: space-between; background: #ffffff;">
-            <div>
-              <div style="font-weight: bold; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 5px; font-size: 10.5px; line-height: 1.4;">
-                الملاحظات / Note:
-              </div>
-              <div style="color: #334155; line-height: 1.5; white-space: pre-wrap; font-size: 9.5px;">
-                ${invoice.notes?.trim()}
-              </div>
-            </div>
-            <div style="border-top: 1px solid #e2e8f0; padding-top: 5px; margin-top: 6px; text-align: center; line-height: 1.4;">
-              <div style="font-weight: bold; color: #0f172a; font-size: 10px;">شكراً لتعاونكم</div>
-              <div style="font-size: 9px; color: #475569;">شركة الصفوة ميديكال جروب</div>
-            </div>
-          </div>
-
-          <div style="width: 225px; shrink: 0; background: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 7px 10px; font-size: 11px;">
-            <div style="display: flex; justify-content: space-between; padding: 3.5px 0; border-bottom: 1px solid #e2e8f0; line-height: 1.4;">
-              <span style="color: #475569;">الإجمالي:</span>
-              <span style="font-weight: bold; color: #0f172a; white-space: nowrap;">${formatCurrency(invoice.subtotal, true)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; padding: 3.5px 0; border-bottom: 1px solid #e2e8f0; line-height: 1.4;">
-              <span style="color: #475569;">الخصم ${invoice.discount_percentage > 0 ? `(${invoice.discount_percentage}%)` : ''}:</span>
-              <span style="font-weight: bold; color: #92400e; white-space: nowrap;">${invoice.discount_amount > 0 ? `- ${formatCurrency(invoice.discount_amount, true)}` : '0.00 ج.م'}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; background: #dcfce7; border: 1px solid #16a34a; border-radius: 4px; font-weight: 900; margin-top: 5px; line-height: 1.4;">
-              <span>الإجمالي بعد الخصم:</span>
-              <span style="color: #166534; font-size: 12px; white-space: nowrap;">${formatCurrency(invoice.final_total, true)}</span>
-            </div>
-            ${invoice.is_bonus ? `
-              <div style="margin-top: 5px; padding: 2.5px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; text-align: center; font-size: 9px; font-weight: 900; color: #92400e; line-height: 1.3;">
-                ⭐ BONUS / بونص
-              </div>
-            ` : ''}
-            ${buildAccountSummaryHtml(invoice)}
-          </div>
-        </div>
-      `;
-    } else {
-      // NO Note: Completely hide notes box, render Totals box and company signature
-      footerDiv.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%;">
-          <div style="text-align: right; line-height: 1.5;">
-            <div style="font-size: 11px; font-weight: bold; color: #0f172a;">شكراً لتعاونكم</div>
-            <div style="font-size: 10px; color: #475569;">شركة الصفوة ميديكال جروب</div>
-          </div>
-
-          <div style="width: 225px; shrink: 0; background: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 7px 10px; font-size: 11px;">
-            <div style="display: flex; justify-content: space-between; padding: 3.5px 0; border-bottom: 1px solid #e2e8f0; line-height: 1.4;">
-              <span style="color: #475569;">الإجمالي:</span>
-              <span style="font-weight: bold; color: #0f172a; white-space: nowrap;">${formatCurrency(invoice.subtotal, true)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; padding: 3.5px 0; border-bottom: 1px solid #e2e8f0; line-height: 1.4;">
-              <span style="color: #475569;">الخصم ${invoice.discount_percentage > 0 ? `(${invoice.discount_percentage}%)` : ''}:</span>
-              <span style="font-weight: bold; color: #92400e; white-space: nowrap;">${invoice.discount_amount > 0 ? `- ${formatCurrency(invoice.discount_amount, true)}` : '0.00 ج.م'}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; background: #dcfce7; border: 1px solid #16a34a; border-radius: 4px; font-weight: 900; margin-top: 5px; line-height: 1.4;">
-              <span>الإجمالي بعد الخصم:</span>
-              <span style="color: #166534; font-size: 12px; white-space: nowrap;">${formatCurrency(invoice.final_total, true)}</span>
-            </div>
-            ${invoice.is_bonus ? `
-              <div style="margin-top: 5px; padding: 2.5px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; text-align: center; font-size: 9px; font-weight: 900; color: #92400e; line-height: 1.3;">
-                ⭐ BONUS / بونص
-              </div>
-            ` : ''}
-            ${buildAccountSummaryHtml(invoice)}
-          </div>
-        </div>
-      `;
-    }
+    footerDiv.innerHTML = buildHorizontalFooterHtml(invoice);
     page.appendChild(footerDiv);
   }
 
